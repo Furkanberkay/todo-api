@@ -1,8 +1,8 @@
 package main
 
 import (
-	db "todo-api-db/db"
-	gethandler "todo-api-db/handlers"
+	db "todo-api/db"
+	"todo-api/handlers"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
@@ -12,9 +12,10 @@ func main() {
 	if err := db.InitDB(); err != nil {
 		log.Fatalf("db init failed: %v", err)
 	}
-	defer db.Db.Close()
+	defer db.Conn().Close()
 	e := echo.New()
-	e.GET("/todos", gethandler.GetTodos)
+	e.GET("/todos", handlers.GetTodos)
+	e.POST("/todos", handlers.AddTodo)
 
 	log.Fatal(e.Start(":8080"))
 }

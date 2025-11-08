@@ -2,22 +2,15 @@ package handlers
 
 import (
 	"net/http"
-	db "todo-api-db/db"
+	"todo-api/db"
 
 	"github.com/labstack/echo/v4"
 )
 
-type Todo struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Completed   bool   `json:"completed"`
-}
-
 func GetTodos(c echo.Context) error {
 	var todos []Todo
 
-	rows, err := db.Db.Query("SELECT * FROM todos")
+	rows, err := db.Conn().Query("SELECT * FROM todos")
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),

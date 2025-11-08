@@ -1,4 +1,4 @@
-module todo-api-db
+module todo-api
 
 go 1.25.3
 
