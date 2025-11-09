@@ -1,13 +1,17 @@
 package handlers
 
-import "log"
+import (
+	"log"
+)
 
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
 func ValidationError(s string) ErrorResponse {
-	return ErrorResponse{s}
+	return ErrorResponse{
+		Error: s,
+	}
 }
 func InternalError(err error) ErrorResponse {
 	if err != nil {
