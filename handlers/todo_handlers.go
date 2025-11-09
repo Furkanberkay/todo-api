@@ -43,35 +43,38 @@ func GetTodos(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, todos)
 }
-
 func UpdateTodos(c echo.Context) error {
 	idStr := c.Param("id")
 
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
+	id, paramErr := strconv.Atoi(idStr)
+	if paramErr != nil {
 		return c.JSON(http.StatusBadRequest, ValidationError("id must be a number"))
 	}
-	var todo models.Todo
-	if err := c.Bind(&todo); err != nil {
+	var updatedTodo UpdateTodoRequest
+	if err := c.Bind(&updatedTodo); err != nil {
 		return c.JSON(http.StatusBadRequest, ValidationError("invalid body"))
 	}
 
-	if strings.TrimSpace(todo.Name) == "" {
+	if strings.TrimSpace(updatedTodo.Name) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{"name is required"})
 	}
-	if strings.TrimSpace(todo.Description) == "" {
+	if strings.TrimSpace(updatedTodo.Description) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{"description is required"})
 	}
+	if updatedTodo.Completed == nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"completed is required"})
+	}
+	completed := boolToInt(*updatedTodo.Completed)
 
-	result, err := db.Conn().Exec(
+	result, execErr := db.Conn().Exec(
 		"UPDATE todos SET name = ?, description = ?, completed = ? WHERE id = ?",
-		todo.Name,
-		todo.Description,
-		todo.Completed,
+		updatedTodo.Name,
+		updatedTodo.Description,
+		completed,
 		id,
 	)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, InternalError(err))
+	if execErr != nil {
+		return c.JSON(http.StatusInternalServerError, InternalError(execErr))
 	}
 	resultInt, resultErr := result.RowsAffected()
 	if resultErr != nil {
@@ -80,7 +83,13 @@ func UpdateTodos(c echo.Context) error {
 	if resultInt == 0 {
 		return c.JSON(http.StatusNotFound, ErrorResponse{"todo not found"})
 	}
-	todo.Id = id
+
+	todo := models.Todo{
+		Id:          id,
+		Name:        updatedTodo.Name,
+		Description: updatedTodo.Description,
+		Completed:   *updatedTodo.Completed,
+	}
 	return c.JSON(http.StatusOK, todo)
 
 }
