@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,7 +20,11 @@ func GetTodos(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
-	defer rows.Close()
+	defer func() {
+		if cerr := rows.Close(); cerr != nil {
+			log.Printf("rows close error: %v", cerr)
+		}
+	}()
 
 	for rows.Next() {
 		var todo models.Todo
@@ -123,9 +128,11 @@ func CreateTodo(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, InternalError(err))
 	}
 
-	if resultId, resultErr := result.LastInsertId(); resultErr == nil {
-		todo.Id = int(resultId)
+	resultId, resultErr := result.LastInsertId()
+	if resultErr != nil {
+		return c.JSON(http.StatusInternalServerError, InternalError(resultErr))
 	}
+	todo.Id = int(resultId)
 
 	return c.JSON(http.StatusCreated, todo)
 
