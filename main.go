@@ -16,6 +16,7 @@ func main() {
 	e := echo.New()
 	e.GET("/todos", handlers.GetTodos)
 	e.POST("/todos", handlers.AddTodo)
+	e.PUT("/todos/:id", handlers.UpdateTodos)
 
 	log.Fatal(e.Start(":8080"))
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 	"todo-api/db"
 
 	"github.com/labstack/echo/v4"
@@ -13,6 +14,13 @@ func AddTodo(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
+	}
+
+	if strings.TrimSpace(todo.Name) == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"name is required"})
+	}
+	if strings.TrimSpace(todo.Description) == "" {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"description is required"})
 	}
 	var completed int
 	if todo.Completed {
@@ -27,9 +35,7 @@ func AddTodo(c echo.Context) error {
 		completed,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		return c.JSON(http.StatusInternalServerError, InternalError(err))
 	}
 
 	if resultId, resultErr := result.LastInsertId(); resultErr == nil {
