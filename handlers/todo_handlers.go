@@ -175,8 +175,8 @@ func PatchTodo(c echo.Context) error {
 	todo := models.Todo{}
 	var completed int
 
-	row := db.Conn().QueryRow("SELECT name,description,completed FROM todos WHERE id = ?", id)
-	if err := row.Scan(&todo.Name, &todo.Description, &completed); err != nil {
+	row := db.Conn().QueryRow("SELECT id,name,description,completed FROM todos WHERE id = ?", id)
+	if err := row.Scan(&todo.Id, &todo.Name, &todo.Description, &completed); err != nil {
 		if err == sql.ErrNoRows {
 			return c.JSON(http.StatusNotFound, ErrorResponse{"todo not found"})
 		}
