@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,9 +18,7 @@ func GetTodos(c echo.Context) error {
 
 	rows, err := db.Conn().Query("SELECT * FROM todos")
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		return c.JSON(http.StatusInternalServerError, InternalError(err))
 	}
 	defer func() {
 		if cerr := rows.Close(); cerr != nil {
@@ -105,7 +104,6 @@ func CreateTodo(c echo.Context) error {
 	if err := c.Bind(&todoDto); err != nil {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{"invalid body"})
 	}
-
 	if strings.TrimSpace(todoDto.Name) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{"name is required"})
 	}
@@ -130,7 +128,7 @@ func CreateTodo(c echo.Context) error {
 		Description: todoDto.Description,
 		Completed:   false,
 	}
-
+	c.Response().Header().Set("Location", fmt.Sprintf("/todos/%d", todo.Id))
 	return c.JSON(http.StatusCreated, todo)
 
 }
@@ -155,9 +153,7 @@ func DeleteTodo(c echo.Context) error {
 	}
 	return c.NoContent(http.StatusNoContent)
 }
-
 func PatchTodo(c echo.Context) error {
-
 	strId := c.Param("id")
 	id, errId := strconv.Atoi(strId)
 	if errId != nil {
@@ -191,9 +187,7 @@ func PatchTodo(c echo.Context) error {
 		todo.Name = *patchTodo.Name
 	}
 	if patchTodo.Description != nil {
-		if strings.TrimSpace(*patchTodo.Description) == "" {
-			return c.JSON(http.StatusBadRequest, ErrorResponse{"description is required"})
-		}
+		
 		todo.Description = *patchTodo.Description
 	}
 	if patchTodo.Completed != nil {
@@ -225,7 +219,6 @@ func PatchTodo(c echo.Context) error {
 	return c.JSON(http.StatusOK, todo)
 
 }
-
 func GetTodosById(c echo.Context) error {
 	strId := c.Param("id")
 	id, strErr := strconv.Atoi(strId)
