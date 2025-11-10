@@ -100,30 +100,21 @@ func UpdateTodos(c echo.Context) error {
 
 }
 func CreateTodo(c echo.Context) error {
-	var todo models.Todo
-	if err := c.Bind(&todo); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": err.Error(),
-		})
+	var todoDto CreateTodoRequest
+
+	if err := c.Bind(&todoDto); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"invalid body"})
 	}
 
-	if strings.TrimSpace(todo.Name) == "" {
+	if strings.TrimSpace(todoDto.Name) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{"name is required"})
 	}
-	if strings.TrimSpace(todo.Description) == "" {
+	if strings.TrimSpace(todoDto.Description) == "" {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{"description is required"})
 	}
-	var completed int
-	if todo.Completed {
-		completed = 1
-	} else {
-		completed = 0
-	}
-
-	result, err := db.Conn().Exec("INSERT INTO todos (name,description,completed) VALUES (?,?,?)",
-		todo.Name,
-		todo.Description,
-		completed,
+	result, err := db.Conn().Exec("INSERT INTO todos (name,description) VALUES (?,?)",
+		todoDto.Name,
+		todoDto.Description,
 	)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, InternalError(err))
@@ -133,7 +124,12 @@ func CreateTodo(c echo.Context) error {
 	if resultErr != nil {
 		return c.JSON(http.StatusInternalServerError, InternalError(resultErr))
 	}
-	todo.Id = int(resultId)
+	todo := models.Todo{
+		Id:          int(resultId),
+		Name:        todoDto.Name,
+		Description: todoDto.Description,
+		Completed:   false,
+	}
 
 	return c.JSON(http.StatusCreated, todo)
 
