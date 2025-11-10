@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
@@ -135,5 +136,124 @@ func CreateTodo(c echo.Context) error {
 	todo.Id = int(resultId)
 
 	return c.JSON(http.StatusCreated, todo)
+
+}
+func DeleteTodo(c echo.Context) error {
+	paramIdStr := c.Param("id")
+	paramId, err := strconv.Atoi(paramIdStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"id must be a number"})
+	}
+	resultDb, errorDb := db.Conn().Exec("DELETE FROM todos WHERE id = ?", paramId)
+	if errorDb != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": errorDb.Error(),
+		})
+	}
+	rowsAffected, rowsErr := resultDb.RowsAffected()
+	if rowsErr != nil {
+		return c.JSON(http.StatusInternalServerError, InternalError(err))
+	}
+	if rowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, ErrorResponse{"todo not found"})
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func PatchTodo(c echo.Context) error {
+
+	strId := c.Param("id")
+	id, errId := strconv.Atoi(strId)
+	if errId != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"id must be a number"})
+	}
+	var patchTodo PatchTodoRequest
+
+	if err := c.Bind(&patchTodo); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"invalid body"})
+	}
+	todo := models.Todo{}
+	var completed int
+
+	row := db.Conn().QueryRow("SELECT name,description,completed FROM todos WHERE id = ?", id)
+	if err := row.Scan(&todo.Name, &todo.Description, &completed); err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, ErrorResponse{"todo not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, InternalError(err))
+	}
+	if completed == 1 {
+		todo.Completed = true
+	} else {
+		todo.Completed = false
+	}
+
+	if patchTodo.Name != nil {
+		if strings.TrimSpace(*patchTodo.Name) == "" {
+			return c.JSON(http.StatusBadRequest, ErrorResponse{"name is required"})
+		}
+		todo.Name = *patchTodo.Name
+	}
+	if patchTodo.Description != nil {
+		if strings.TrimSpace(*patchTodo.Description) == "" {
+			return c.JSON(http.StatusBadRequest, ErrorResponse{"description is required"})
+		}
+		todo.Description = *patchTodo.Description
+	}
+	if patchTodo.Completed != nil {
+		if *patchTodo.Completed {
+			todo.Completed = true
+		} else {
+			todo.Completed = false
+		}
+	}
+
+	completedDB := boolToInt(todo.Completed)
+	result, err := db.Conn().Exec("UPDATE todos SET name = ?, description = ?, completed = ? WHERE id = ?",
+		todo.Name,
+		todo.Description,
+		completedDB,
+		id,
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, InternalError(err))
+	}
+	affected, affectedErr := result.RowsAffected()
+	if affectedErr != nil {
+		return c.JSON(http.StatusInternalServerError, InternalError(affectedErr))
+	}
+	if affected == 0 {
+		log.Printf("[PATCH /todos/%d] No changes applied — existing values identical.\n", id)
+	}
+
+	return c.JSON(http.StatusOK, todo)
+
+}
+
+func GetTodosById(c echo.Context) error {
+	strId := c.Param("id")
+	id, strErr := strconv.Atoi(strId)
+	if strErr != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResponse{"id must be a number"})
+	}
+	rows := db.Conn().QueryRow("SELECT id, name, description, completed FROM todos WHERE id = ?", id)
+
+	var completed int
+	todo := models.Todo{}
+
+	err := rows.Scan(&todo.Id, &todo.Name, &todo.Description, &completed)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, ErrorResponse{"todo not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, InternalError(err))
+	}
+	if completed == 1 {
+		todo.Completed = true
+	} else {
+		todo.Completed = false
+	}
+
+	return c.JSON(http.StatusOK, todo)
 
 }
