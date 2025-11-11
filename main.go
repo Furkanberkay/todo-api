@@ -24,3 +24,6 @@ func main() {
 	e.DELETE("/todos/:id", handlers.DeleteTodo)
 	log.Fatal(e.Start(":8080"))
 }
+
+//katman service repository, yapılandır handler,DI
+//config dosyası

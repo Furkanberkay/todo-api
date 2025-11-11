@@ -14,8 +14,7 @@ import (
 )
 
 func GetTodos(c echo.Context) error {
-	var todos []models.Todo
-
+	todos := []models.Todo{}
 	rows, err := db.Conn().Query("SELECT * FROM todos")
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, InternalError(err))
@@ -187,7 +186,7 @@ func PatchTodo(c echo.Context) error {
 		todo.Name = *patchTodo.Name
 	}
 	if patchTodo.Description != nil {
-		
+
 		todo.Description = *patchTodo.Description
 	}
 	if patchTodo.Completed != nil {
