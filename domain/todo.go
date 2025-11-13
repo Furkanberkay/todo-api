@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 type Todo struct {
 	Id          int    `json:"id"`
@@ -16,3 +19,8 @@ type TodoRepository interface {
 	DeleteTodo(ctx context.Context, id int) error
 	PatchTodo(ctx context.Context, todo *Todo) (*Todo, error)
 }
+
+var (
+	InternalError   = errors.New("Server Internel Error")
+	ErrTodoNotFound = errors.New("Todo not found")
+)
