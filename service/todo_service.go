@@ -2,21 +2,26 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"todo-api/domain"
-	"todo-api/repository"
 )
 
 type CreateTodoRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
+	Name        *string
+	Description *string
+}
+type UpdateTodoRequest struct {
+	Name        *string
+	Description *string
+	Completed   *bool
 }
 
 type TodoService struct {
-	repo repository.SqliteTodoRepository
+	repo domain.TodoRepository
 }
 
-func NewTodoService(repository repository.SqliteTodoRepository) *TodoService {
+func NewTodoService(repository domain.TodoRepository) *TodoService {
 	return &TodoService{repo: repository}
 }
 
@@ -45,4 +50,39 @@ func (s *TodoService) CreateTodo(ctx context.Context, createDto CreateTodoReques
 	}
 	return &todo, nil
 
+}
+func (s *TodoService) UpdateTodo(ctx context.Context, updateTodoDto *UpdateTodoRequest, id int) (*domain.Todo, error) {
+
+	if updateTodoDto.Name == nil {
+		return nil, domain.ErrNameValidation
+	}
+
+	if updateTodoDto.Description == nil {
+		return nil, domain.ErrDescriptionValidation
+	}
+
+	if updateTodoDto.Completed == nil {
+		return nil, domain.ErrCompletedValidation
+	}
+
+	updateTodo := domain.Todo{
+		Id:          id,
+		Name:        *updateTodoDto.Name,
+		Description: *updateTodoDto.Description,
+		Completed:   *updateTodoDto.Completed,
+	}
+
+	updateTodoResult, err := s.repo.UpdateTodo(ctx, &updateTodo)
+	if err != nil {
+		if errors.Is(err, domain.ErrTodoNotFound) {
+			return nil, domain.ErrTodoNotFound
+		}
+		return nil, domain.ErrInternal
+	}
+	return updateTodoResult, nil
+
+}
+func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
+
+	return s.repo.DeleteTodo(ctx, id)
 }
