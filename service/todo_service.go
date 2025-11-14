@@ -16,6 +16,11 @@ type UpdateTodoRequest struct {
 	Description *string
 	Completed   *bool
 }
+type PatchTodoRequest struct {
+	Name        *string
+	Description *string
+	Completed   *bool
+}
 
 type TodoService struct {
 	repo domain.TodoRepository
@@ -85,4 +90,33 @@ func (s *TodoService) UpdateTodo(ctx context.Context, updateTodoDto *UpdateTodoR
 func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
 
 	return s.repo.DeleteTodo(ctx, id)
+}
+func (s *TodoService) PatchTodo(ctx context.Context, patchTodo PatchTodoRequest, id int) (*domain.Todo, error) {
+	todo, err := s.repo.GetTodoByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrTodoNotFound) {
+			return nil, domain.ErrTodoNotFound
+		}
+		return nil, domain.ErrInternal
+	}
+	if patchTodo.Name == nil && patchTodo.Description == nil && patchTodo.Completed == nil {
+		return nil, domain.ErrValidation
+	}
+	if patchTodo.Name != nil {
+		todo.Name = *patchTodo.Name
+	}
+	if patchTodo.Description != nil {
+		todo.Description = *patchTodo.Description
+	}
+	if patchTodo.Completed != nil {
+		todo.Completed = *patchTodo.Completed
+	}
+	updatedTodo, errUpdate := s.repo.UpdateTodo(ctx, todo)
+	if errUpdate != nil {
+		if errors.Is(errUpdate, domain.ErrTodoNotFound) {
+			return nil, domain.ErrTodoNotFound
+		}
+		return nil, domain.ErrInternal
+	}
+	return updatedTodo, nil
 }
