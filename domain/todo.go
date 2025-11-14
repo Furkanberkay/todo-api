@@ -17,10 +17,11 @@ type TodoRepository interface {
 	UpdateTodo(ctx context.Context, todo *Todo) (*Todo, error)
 	CreateTodo(ctx context.Context, todo *Todo) error
 	DeleteTodo(ctx context.Context, id int) error
-	PatchTodo(ctx context.Context, todo *Todo) (*Todo, error)
+	GetTodoByID(ctx context.Context, id int) (*Todo, error)
 }
 
 var (
-	InternalError   = errors.New("Server Internel Error")
+	ErrInternal     = errors.New("Server Internel Error")
 	ErrTodoNotFound = errors.New("Todo not found")
+	ErrValidation   = errors.New("validation error")
 )
