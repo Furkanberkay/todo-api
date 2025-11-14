@@ -20,6 +20,7 @@ func NewTodoHandler(todoService *service.TodoService) *TodoHandler {
 func (h *TodoHandler) ClientRouters(e *echo.Echo) {
 	e.GET("/todos", h.GetTodos)
 	e.GET("/todos/:id", h.GetTodoByID)
+	e.PUT("/todos/:id", h.UpdateTodo)
 
 }
 
@@ -62,4 +63,66 @@ func (h *TodoHandler) DeleteTodo(e echo.Context) error {
 		return e.JSON(http.StatusInternalServerError, ResponseErr{Message: err.Error()})
 	}
 	return e.NoContent(http.StatusNoContent)
+}
+func (h *TodoHandler) UpdateTodo(e echo.Context) error {
+	pathId := e.Param("id")
+	updateId, err := strconv.Atoi(pathId)
+	if err != nil {
+		return e.JSON(http.StatusBadRequest, ResponseErr{Message: "id must be a number"})
+	}
+	updateDto := service.UpdateTodoRequest{}
+	if err := e.Bind(&updateDto); err != nil {
+		return e.JSON(http.StatusBadRequest, ResponseErr{Message: "invalid request body"})
+	}
+	updateTodo, updateErr := h.todoService.UpdateTodo(e.Request().Context(), &updateDto, updateId)
+	if updateErr != nil {
+		if errors.Is(updateErr, domain.ErrTodoNotFound) {
+			return e.JSON(http.StatusNotFound, ResponseErr{
+				Message: updateErr.Error()})
+		}
+		if errors.Is(updateErr, domain.ErrDescriptionValidation) {
+			return e.JSON(http.StatusBadRequest, ResponseErr{
+				Message: updateErr.Error()})
+		}
+		if errors.Is(updateErr, domain.ErrCompletedValidation) {
+			return e.JSON(http.StatusBadRequest, ResponseErr{
+				Message: updateErr.Error()})
+		}
+		if errors.Is(updateErr, domain.ErrNameValidation) {
+			return e.JSON(http.StatusBadRequest, ResponseErr{
+				Message: updateErr.Error()})
+		}
+
+		return e.JSON(http.StatusInternalServerError, ResponseErr{
+			Message: updateErr.Error(),
+		})
+	}
+	return e.JSON(http.StatusOK, updateTodo)
+
+}
+func (h *TodoHandler) PatchTodo(e echo.Context) error {
+	pathId := e.Param("id")
+	id, err := strconv.Atoi(pathId)
+	if err != nil {
+		return e.JSON(http.StatusBadRequest, ResponseErr{
+			Message: "id must be a number",
+		})
+	}
+	patchTodo := service.PatchTodoRequest{}
+	if err := e.Bind(&patchTodo); err != nil {
+		return e.JSON(http.StatusBadRequest, ResponseErr{Message: "validate error"})
+	}
+	todo, responseErr := h.todoService.PatchTodo(e.Request().Context(), &patchTodo, id)
+	if responseErr != nil {
+		if errors.Is(responseErr, domain.ErrTodoNotFound) {
+			return e.JSON(http.StatusNotFound, ResponseErr{
+				Message: responseErr.Error(),
+			})
+		}
+		return e.JSON(http.StatusInternalServerError, ResponseErr{
+			Message: responseErr.Error(),
+		})
+	}
+	return e.JSON(http.StatusOK, todo)
+
 }

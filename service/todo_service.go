@@ -12,9 +12,9 @@ type CreateTodoRequest struct {
 	Description *string
 }
 type UpdateTodoRequest struct {
-	Name        *string
-	Description *string
-	Completed   *bool
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Completed   *bool   `json:"completed"`
 }
 type PatchTodoRequest struct {
 	Name        *string
@@ -91,7 +91,7 @@ func (s *TodoService) DeleteTodo(ctx context.Context, id int) error {
 
 	return s.repo.DeleteTodo(ctx, id)
 }
-func (s *TodoService) PatchTodo(ctx context.Context, patchTodo PatchTodoRequest, id int) (*domain.Todo, error) {
+func (s *TodoService) PatchTodo(ctx context.Context, patchTodo *PatchTodoRequest, id int) (*domain.Todo, error) {
 	todo, err := s.repo.GetTodoByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrTodoNotFound) {

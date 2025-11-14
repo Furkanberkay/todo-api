@@ -24,7 +24,7 @@ func (t *SqliteTodoRepository) GetTodos(ctx context.Context) ([]domain.Todo, err
 		ORDER BY id;
 	`
 
-	todos := []domain.Todo{}
+	var todos = []domain.Todo{}
 
 	rows, queryErr := t.db.QueryContext(ctx, q)
 	if queryErr != nil {
