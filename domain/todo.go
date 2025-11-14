@@ -21,10 +21,10 @@ type TodoRepository interface {
 }
 
 var (
-	ErrInternal              = errors.New("Server Internel Error")
-	ErrTodoNotFound          = errors.New("Todo not found")
+	ErrInternal              = errors.New(`server Internel Error`)
+	ErrTodoNotFound          = errors.New("todo not found")
 	ErrValidation            = errors.New("validation error")
-	ErrNameValidation        = errors.New("Name is required")
-	ErrDescriptionValidation = errors.New("Description  is required")
-	ErrCompletedValidation   = errors.New("Completed is required")
+	ErrNameValidation        = errors.New("name is required")
+	ErrDescriptionValidation = errors.New(`Description  is required`)
+	ErrCompletedValidation   = errors.New("completed is required")
 )

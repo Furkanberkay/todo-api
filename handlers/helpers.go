@@ -1,8 +1,5 @@
 package handlers
 
-func boolToInt(b bool) int {
-	if b == true {
-		return 1
-	}
-	return 0
+type ResponseErr struct {
+	Message string `json:"message"`
 }
