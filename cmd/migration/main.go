@@ -9,5 +9,5 @@ func main() {
 	cfg := config.Load()
 
 	db := database.NewSQLite(cfg.SQLitePath)
-	db.AutoMigrate(db)
+	database.AutoMigrate(db)
 }

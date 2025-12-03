@@ -28,7 +28,7 @@ func (h *Handler) RegisterUser(e echo.Context) error {
 		})
 	}
 
-	if err := h.validator.Struct(&userDTO); err != nil {
+	if err := h.validator.Struct(userDTO); err != nil {
 		validateError := httpx.ParseValidationErrors(err)
 		return e.JSON(http.StatusBadRequest, validateError)
 	}

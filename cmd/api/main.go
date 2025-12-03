@@ -30,4 +30,6 @@ func main() {
 
 	handler.Routes(e)
 
+	e.Start(cfg.HTTPAddr)
+
 }
