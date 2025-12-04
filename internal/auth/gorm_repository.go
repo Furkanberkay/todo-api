@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"todoApp3/internal/domain"
@@ -38,4 +39,28 @@ func (r *GormRepository) RegisterUser(ctx context.Context, user *domain.User) er
 		return domain.InternalError
 	}
 	return nil
+}
+
+func (r *GormRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	cleanEmail := strings.TrimSpace(email)
+
+	if cleanEmail == "" {
+		return nil, domain.InvalidInput
+	}
+
+	user := new(domain.User)
+
+	if result := r.db.WithContext(ctx).First(user, "email = ?", cleanEmail); result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+
+		r.logger.Error("failed to find user",
+			slog.String("email", cleanEmail),
+			slog.String("error", result.Error.Error()),
+		)
+		return nil, domain.InternalError
+	}
+	return user, nil
+
 }

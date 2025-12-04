@@ -56,3 +56,19 @@ func (h *Handler) RegisterUser(e echo.Context) error {
 
 	return e.JSON(http.StatusOK, response)
 }
+
+func (h *Handler) Login(e echo.Context) error {
+
+	dto := LoginRequest{}
+	if err := e.Bind(&dto); err != nil {
+		return httpx.BindErrorResponse(e, err)
+	}
+
+	if err := h.validator.Struct(&dto); err != nil {
+		validationError := httpx.ParseValidationErrors(err)
+		return e.JSON(http.StatusBadRequest, validationError)
+	}
+
+	h.service.Login()
+
+}

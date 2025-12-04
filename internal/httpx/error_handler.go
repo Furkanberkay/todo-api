@@ -22,3 +22,9 @@ func HandlerError(e echo.Context, err error) error {
 		Message: domain.InternalError.Error(),
 	})
 }
+
+func BindErrorResponse(e echo.Context, err error) error {
+	return e.JSON(http.StatusBadRequest, ResponseError{
+		Message: "invalid error",
+	})
+}
