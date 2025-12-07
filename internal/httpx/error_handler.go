@@ -13,11 +13,19 @@ type ResponseError struct {
 }
 
 func HandlerError(e echo.Context, err error) error {
+
 	if errors.Is(err, domain.ErrUserAlreadyExists) {
 		return e.JSON(http.StatusConflict, ResponseError{
 			Message: domain.ErrUserAlreadyExists.Error(),
 		})
 	}
+
+	if errors.Is(err, domain.InvalidInput) {
+		return e.JSON(http.StatusConflict, ResponseError{
+			Message: domain.InvalidInput.Error(),
+		})
+	}
+
 	return e.JSON(http.StatusInternalServerError, ResponseError{
 		Message: domain.InternalError.Error(),
 	})

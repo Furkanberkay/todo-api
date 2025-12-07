@@ -47,7 +47,7 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 
 }
 
-func (s *Service) Login(ctx context.Context, loginInput LoginInput) (string, error) {
+func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (string, error) {
 
 	email := loginInput.Email
 
@@ -62,14 +62,14 @@ func (s *Service) Login(ctx context.Context, loginInput LoginInput) (string, err
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
 		return "", domain.ErrInvalidCredentials
 	}
-
+	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * time.Minute
 	claims := MyCustomClaim{
 		UserID: user.ID,
 		Email:  user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expirationDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "FurkanBerkayOzcan",
+			Issuer:    s.config.AppName,
 		},
 	}
 

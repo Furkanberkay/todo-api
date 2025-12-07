@@ -69,6 +69,17 @@ func (h *Handler) Login(e echo.Context) error {
 		return e.JSON(http.StatusBadRequest, validationError)
 	}
 
-	h.service.Login()
+	loginInput := LoginInput{
+		Email:    dto.Email,
+		Password: dto.Password,
+	}
+
+	jwtToken, errorToken := h.service.Login(e.Request().Context(), &loginInput)
+
+	if errorToken != nil {
+		return httpx.HandlerError(e, errorToken)
+	}
+
+	return e.JSON(http.StatusOK, jwtToken)
 
 }

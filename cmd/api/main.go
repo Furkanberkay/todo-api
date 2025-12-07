@@ -22,7 +22,7 @@ func main() {
 	validate := validator.New()
 
 	repository := auth.NewRepository(db, slogLogger)
-	service := auth.NewService(repository)
+	service := auth.NewService(repository, cfg, slogLogger)
 	handler := auth.NewHandler(service, validate)
 
 	e := echo.New()
