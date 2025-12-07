@@ -2,12 +2,13 @@ package auth
 
 import (
 	"context"
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 	"log/slog"
 	"time"
 	"todoApp3/config"
 	"todoApp3/internal/domain"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
