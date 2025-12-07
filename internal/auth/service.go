@@ -47,20 +47,20 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 
 }
 
-func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (string, error) {
+func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutput, error) {
 
 	email := loginInput.Email
 
 	user, err := s.repository.GetUserByEmail(ctx, email)
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	password := loginInput.Password
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
-		return "", domain.ErrInvalidCredentials
+		return nil, domain.ErrInvalidCredentials
 	}
 	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * time.Minute
 	claims := MyCustomClaim{
@@ -78,12 +78,19 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (string, er
 	tokenString, signedErr := token.SignedString([]byte(s.config.SecretKey))
 
 	if signedErr != nil {
-		s.logger.Error("token error",
-			slog.String("error", signedErr.Error()))
+		s.logger.Error("failed to sign token during login",
+			slog.String("error", signedErr.Error()),
+			slog.String("email", user.Email),
+		)
 
-		return "", domain.InternalError
+		return nil, domain.InternalError
 	}
 
-	return tokenString, nil
+	loginOutput := LoginOutput{
+		AccessToken: tokenString,
+		ExpiresIn:   s.config.JwtExpirationMinutes * 60,
+	}
+
+	return &loginOutput, nil
 
 }

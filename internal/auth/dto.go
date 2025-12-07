@@ -28,3 +28,9 @@ type MyCustomClaim struct {
 	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
+
+type LoginResponse struct {
+	AccessToken string `json:"accessToken"`
+	TokenType   string `json:"tokenType"`
+	ExpiresIn   int    `json:"expiresIn"`
+}

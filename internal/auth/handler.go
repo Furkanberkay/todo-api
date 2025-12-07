@@ -74,12 +74,18 @@ func (h *Handler) Login(e echo.Context) error {
 		Password: dto.Password,
 	}
 
-	jwtToken, errorToken := h.service.Login(e.Request().Context(), &loginInput)
+	loginOutput, errorToken := h.service.Login(e.Request().Context(), &loginInput)
 
 	if errorToken != nil {
 		return httpx.HandlerError(e, errorToken)
 	}
 
-	return e.JSON(http.StatusOK, jwtToken)
+	response := LoginResponse{
+		AccessToken: loginOutput.AccessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   loginOutput.ExpiresIn,
+	}
+
+	return e.JSON(http.StatusOK, response)
 
 }
