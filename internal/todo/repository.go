@@ -71,3 +71,35 @@ func (r *Repository) GetTodoByID(ctx context.Context, userID uint, todoID uint) 
 
 	return &todo, nil
 }
+
+func (r *Repository) CreateTodo(ctx context.Context, todo *domain.Todo) error {
+	result := r.db.WithContext(ctx).Model(&domain.Todo{}).Create(todo)
+
+	if result.Error != nil {
+		r.logger.Error("database error during todo creation",
+			slog.String("component", "TodoRepository"),
+			slog.String("error", result.Error.Error()),
+		)
+		return domain.InternalError
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateTodo(ctx context.Context, todo *domain.Todo) error {
+	result := r.db.WithContext(ctx).Where("id=? AND user_id=?", todo.ID, todo.UserID).Updates(&todo)
+
+	if result.Error != nil {
+		r.logger.Error("database error during todo update",
+			slog.String("component", "TodoRepository"),
+			slog.Int("todo_id", int(todo.ID)),
+			slog.String("error", result.Error.Error()),
+		)
+		return domain.InternalError
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrTodoNotFound
+	}
+
+	return nil
+}
