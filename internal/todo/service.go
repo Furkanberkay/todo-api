@@ -76,6 +76,31 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 }
 
 func (s *Service) DeleteTodo(ctx context.Context, userID uint, todoID uint) error {
-	
+
 	return s.repository.DeleteTodo(ctx, userID, todoID)
+}
+
+func (s *Service) PatchTodo(ctx context.Context, userID uint, input *PatchTodoInput) (*domain.Todo, error) {
+
+	if input.Name == nil && input.Description == nil && input.Completed == nil {
+		return nil, domain.InvalidInput
+	}
+	todo, err := s.GetTodoByID(ctx, input.ID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if input.Name != nil {
+		todo.Name = *input.Name
+	}
+	if input.Description != nil {
+		todo.Description = *input.Description
+	}
+	if input.Completed != nil {
+		todo.Completed = *input.Completed
+	}
+
+	if err := s.repository.UpdateTodo(ctx, todo); err != nil {
+		return nil, err
+	}
+	return todo, nil
 }

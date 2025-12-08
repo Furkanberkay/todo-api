@@ -87,7 +87,7 @@ func (r *Repository) CreateTodo(ctx context.Context, todo *domain.Todo) error {
 }
 
 func (r *Repository) UpdateTodo(ctx context.Context, todo *domain.Todo) error {
-	result := r.db.WithContext(ctx).Where("id=? AND user_id=?", todo.ID, todo.UserID).Save(todo)
+	result := r.db.WithContext(ctx).Save(todo)
 
 	if result.Error != nil {
 		r.logger.Error("database error during todo update",

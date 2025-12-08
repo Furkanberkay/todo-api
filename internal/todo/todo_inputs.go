@@ -11,3 +11,10 @@ type UpdateTodoInput struct {
 	Description string
 	Completed   bool
 }
+
+type PatchTodoInput struct {
+	ID          uint
+	Name        *string
+	Description *string
+	Completed   *bool
+}
