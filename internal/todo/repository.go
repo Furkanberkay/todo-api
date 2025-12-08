@@ -2,6 +2,7 @@ package todo
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"todoApp3/internal/domain"
 
@@ -32,9 +33,13 @@ func (r *Repository) GetTodos(ctx context.Context, page int, limit int, userID u
 		return nil, 0, domain.InternalError
 	}
 
+	if totalCount == 0 {
+		return []domain.Todo{}, 0, nil
+	}
+
 	offset := (page - 1) * limit
 
-	result := r.db.WithContext(ctx).Where("user_id=?", userID).Offset(offset).Limit(limit).Find(&todos)
+	result := r.db.WithContext(ctx).Where("user_id=?", userID).Order("id desc").Offset(offset).Limit(limit).Find(&todos)
 
 	if result.Error != nil {
 		r.logger.Error("database error during todo list fetch",
@@ -45,4 +50,24 @@ func (r *Repository) GetTodos(ctx context.Context, page int, limit int, userID u
 	}
 	return todos, int(totalCount), nil
 
+}
+
+func (r *Repository) GetTodoByID(ctx context.Context, userID uint, todoID uint) (*domain.Todo, error) {
+	todo := domain.Todo{}
+
+	if err := r.db.WithContext(ctx).Where("user_id=? AND id=?", userID, todoID).First(&todo).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrTodoNotFound
+		}
+
+		r.logger.Error("database error during todo lookup by id",
+			slog.String("component", "TodoRepository"),
+			slog.Int("todo_id", int(todoID)),
+			slog.String("error", err.Error()),
+		)
+
+		return nil, domain.InternalError
+	}
+
+	return &todo, nil
 }

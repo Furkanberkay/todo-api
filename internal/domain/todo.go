@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -16,4 +17,7 @@ type Todo struct {
 
 type TodoRepository interface {
 	GetTodos(ctx context.Context, page int, limit int, userID uint) ([]Todo, int, error)
+	GetTodoByID(ctx context.Context, userID uint, todoID uint) (*Todo, error)
 }
+
+var ErrTodoNotFound = errors.New("todo not found")
