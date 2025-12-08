@@ -14,25 +14,41 @@ type ResponseError struct {
 
 func HandlerError(e echo.Context, err error) error {
 
-	if errors.Is(err, domain.ErrUserAlreadyExists) {
+	switch {
+	case errors.Is(err, domain.ErrUserAlreadyExists):
 		return e.JSON(http.StatusConflict, ResponseError{
-			Message: domain.ErrUserAlreadyExists.Error(),
+			Message: "User already exists",
+		})
+
+	case errors.Is(err, domain.InvalidInput):
+		return e.JSON(http.StatusBadRequest, ResponseError{
+			Message: err.Error(),
+		})
+
+	case errors.Is(err, domain.ErrConflict):
+		return e.JSON(http.StatusConflict, ResponseError{
+			Message: "Data has been modified by another user. Please refresh.",
+		})
+
+	case errors.Is(err, domain.ErrTodoNotFound):
+		return e.JSON(http.StatusNotFound, ResponseError{
+			Message: "Resource not found",
+		})
+
+	case errors.Is(err, domain.ErrInvalidCredentials):
+		return e.JSON(http.StatusUnauthorized, ResponseError{
+			Message: "Invalid credentials",
+		})
+
+	default:
+		return e.JSON(http.StatusInternalServerError, ResponseError{
+			Message: "Internal Server Error",
 		})
 	}
-
-	if errors.Is(err, domain.InvalidInput) {
-		return e.JSON(http.StatusConflict, ResponseError{
-			Message: domain.InvalidInput.Error(),
-		})
-	}
-
-	return e.JSON(http.StatusInternalServerError, ResponseError{
-		Message: domain.InternalError.Error(),
-	})
 }
 
 func BindErrorResponse(e echo.Context, err error) error {
 	return e.JSON(http.StatusBadRequest, ResponseError{
-		Message: "invalid error",
+		Message: "Invalid request format: " + err.Error(),
 	})
 }
