@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/plugin/optimisticlock"
 )
 
 type Todo struct {
@@ -13,6 +14,7 @@ type Todo struct {
 	Description string `gorm:"not null;size:300"`
 	Completed   bool   `gorm:"default:false"`
 	UserID      uint   `gorm:"not null"`
+	Version     optimisticlock.Version
 }
 
 type TodoRepository interface {
@@ -23,3 +25,4 @@ type TodoRepository interface {
 }
 
 var ErrTodoNotFound = errors.New("todo not found")
+var ErrConflict = errors.New("data has been modified by another user")
