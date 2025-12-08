@@ -87,7 +87,7 @@ func (r *Repository) CreateTodo(ctx context.Context, todo *domain.Todo) error {
 }
 
 func (r *Repository) UpdateTodo(ctx context.Context, todo *domain.Todo) error {
-	result := r.db.WithContext(ctx).Where("id=? AND user_id=?", todo.ID, todo.UserID).Save(&todo)
+	result := r.db.WithContext(ctx).Where("id=? AND user_id=?", todo.ID, todo.UserID).Save(todo)
 
 	if result.Error != nil {
 		r.logger.Error("database error during todo update",
@@ -110,5 +110,24 @@ func (r *Repository) UpdateTodo(ctx context.Context, todo *domain.Todo) error {
 		return domain.ErrConflict
 	}
 
+	return nil
+}
+
+func (r *Repository) DeleteTodo(ctx context.Context, userID uint, todoID uint) error {
+	result := r.db.WithContext(ctx).Where("user_id=?", userID).Delete(domain.Todo{}, todoID)
+
+	if result.Error != nil {
+		r.logger.Error("database error during todo deletion",
+			slog.String("component", "todoRepository"),
+			slog.Int("todo_id", int(todoID)),
+			slog.Int("user_id", int(userID)),
+			slog.String("error", result.Error.Error()))
+
+		return domain.InternalError
+	}
+
+	if result.RowsAffected == 0 {
+		return domain.ErrTodoNotFound
+	}
 	return nil
 }

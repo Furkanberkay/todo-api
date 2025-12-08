@@ -22,6 +22,7 @@ type TodoRepository interface {
 	GetTodoByID(ctx context.Context, userID uint, todoID uint) (*Todo, error)
 	CreateTodo(ctx context.Context, todo *Todo) error
 	UpdateTodo(ctx context.Context, todo *Todo) error
+	DeleteTodo(ctx context.Context, userID uint, todoID uint) error
 }
 
 var ErrTodoNotFound = errors.New("todo not found")

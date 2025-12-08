@@ -74,3 +74,8 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 
 	return todo, nil
 }
+
+func (s *Service) DeleteTodo(ctx context.Context, userID uint, todoID uint) error {
+	
+	return s.repository.DeleteTodo(ctx, userID, todoID)
+}
