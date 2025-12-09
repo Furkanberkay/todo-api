@@ -76,6 +76,7 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 		return nil, err
 	}
 
+	todo.Version.Int64++
 	return todo, nil
 }
 
