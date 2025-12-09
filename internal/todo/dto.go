@@ -13,7 +13,7 @@ type CreateTodoRequest struct {
 type UpdateRequest struct {
 	Name        string `json:"name" validate:"required,min=3,max=30"`
 	Description string `json:"description" validate:"required,min=3,max=100"`
-	Completed   bool   `json:"completed" validate:"required"`
+	Completed   *bool  `json:"completed" validate:"required"`
 	Version     int64  `json:"version" validate:"required"`
 }
 

@@ -64,6 +64,10 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 		return nil, err
 	}
 
+	if input.Version != todo.Version.Int64 {
+		return nil, domain.ErrConflict
+	}
+
 	todo.Name = input.Name
 	todo.Description = input.Description
 	todo.Completed = input.Completed

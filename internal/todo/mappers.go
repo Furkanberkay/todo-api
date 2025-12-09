@@ -5,7 +5,7 @@ func UpdateRequestToUpdateInput(todoID int, updateDTO *UpdateRequest) *UpdateTod
 		ID:          uint(todoID),
 		Name:        updateDTO.Name,
 		Description: updateDTO.Description,
-		Completed:   updateDTO.Completed,
+		Completed:   *updateDTO.Completed,
 		Version:     updateDTO.Version,
 	}
 }
