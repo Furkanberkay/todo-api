@@ -10,6 +10,7 @@ type UpdateTodoInput struct {
 	Name        string
 	Description string
 	Completed   bool
+	Version     int64
 }
 
 type PatchTodoInput struct {

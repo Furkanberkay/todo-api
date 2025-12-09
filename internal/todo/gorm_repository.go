@@ -114,7 +114,7 @@ func (r *Repository) UpdateTodo(ctx context.Context, todo *domain.Todo) error {
 }
 
 func (r *Repository) DeleteTodo(ctx context.Context, userID uint, todoID uint) error {
-	result := r.db.WithContext(ctx).Where("user_id=?", userID).Delete(domain.Todo{}, todoID)
+	result := r.db.WithContext(ctx).Where("user_id=?", userID).Delete(&domain.Todo{}, todoID)
 
 	if result.Error != nil {
 		r.logger.Error("database error during todo deletion",

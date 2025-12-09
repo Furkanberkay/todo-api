@@ -1,9 +1,9 @@
 package main
 
 import (
-	"io"
 	"log/slog"
 	"os"
+	"time"
 	"todoApp3/config"
 	"todoApp3/internal/auth"
 	"todoApp3/internal/database"
@@ -13,23 +13,21 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/lmittmann/tint"
 )
 
 func main() {
 	cfg := config.Load()
 	db := database.NewSQLite(cfg.SQLitePath)
 
-	logFile, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic("Log dosyası oluşturulamadı: " + err.Error())
-	}
-	defer logFile.Close()
+	slogHandler := tint.NewHandler(os.Stdout, &tint.Options{
+		Level:      slog.LevelDebug,
+		TimeFormat: time.TimeOnly,
+		AddSource:  true,
+	})
 
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-
-	slogHandler := slog.NewJSONHandler(multiWriter, nil)
 	slogLogger := slog.New(slogHandler)
-
+	slog.SetDefault(slogLogger)
 	validate := validator.New()
 
 	authRepository := auth.NewRepository(db, slogLogger)

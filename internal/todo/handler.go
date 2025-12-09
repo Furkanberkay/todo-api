@@ -102,7 +102,7 @@ func (h *Handler) CreateTodo(e echo.Context) error {
 		ID:          todo.ID,
 		Completed:   todo.Completed,
 		CreatedAt:   todo.CreatedAt,
-		Version:     int(todo.Version.Int64),
+		Version:     todo.Version.Int64,
 	}
 
 	return e.JSON(http.StatusCreated, detailResponse)
@@ -130,5 +130,54 @@ func (h *Handler) DeleteTodo(e echo.Context) error {
 	}
 
 	return e.NoContent(http.StatusNoContent)
+
+}
+
+func (h *Handler) UpdateTodo(e echo.Context) error {
+	idStr := e.Param("id")
+	id, err := strconv.Atoi(idStr)
+
+	if err != nil || id <= 0 {
+		return e.JSON(http.StatusBadRequest, httpx.ResponseError{
+			Message: "id must be positive number",
+		})
+	}
+
+	userID, ok := e.Get("userID").(uint)
+
+	if !ok {
+		return e.JSON(http.StatusUnauthorized, httpx.ResponseError{
+			Message: "UnAuthorized",
+		})
+	}
+
+	updateDTO := new(UpdateRequest)
+
+	if err := e.Bind(updateDTO); err != nil {
+		return httpx.BindErrorResponse(e, err)
+	}
+
+	if err := h.validator.Struct(updateDTO); err != nil {
+		validateError := httpx.ParseValidationErrors(err)
+		return e.JSON(http.StatusBadRequest, validateError)
+	}
+
+	updateInput := UpdateRequestToUpdateInput(id, updateDTO)
+
+	todo, serviceErr := h.service.UpdateTodo(e.Request().Context(), updateInput, userID)
+
+	if serviceErr != nil {
+		return httpx.HandlerError(e, serviceErr)
+	}
+
+	todoResponse := TodoResponse{
+		ID:          todo.ID,
+		Name:        todo.Name,
+		Description: todo.Description,
+		Completed:   todo.Completed,
+		Version:     todo.Version.Int64,
+	}
+
+	return e.JSON(http.StatusOK, todoResponse)
 
 }

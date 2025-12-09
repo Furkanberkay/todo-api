@@ -32,7 +32,7 @@ func HandlerError(e echo.Context, err error) error {
 
 	case errors.Is(err, domain.ErrTodoNotFound):
 		return e.JSON(http.StatusNotFound, ResponseError{
-			Message: "Resource not found",
+			Message: "Todo not found",
 		})
 
 	case errors.Is(err, domain.ErrInvalidCredentials):
