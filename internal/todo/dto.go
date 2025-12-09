@@ -1,6 +1,9 @@
 package todo
 
-import "time"
+import (
+	"time"
+	"todoApp3/internal/domain"
+)
 
 type CreateTodoRequest struct {
 	Name        string `json:"name" validate:"required,min=3,max=30"`
@@ -19,11 +22,28 @@ type PaginatedResponse struct {
 	Meta PaginationMeta `json:"meta"`
 }
 
-type TodoDetailResponse struct {
+type TodoResponse struct {
 	ID          uint      `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Completed   bool      `json:"completed"`
 	CreatedAt   time.Time `json:"createdAt,omitempty"`
-	UpdatedAt   time.Time `json:"updatedAt,omitempty"`
+	Version     int       `json:"version"`
+}
+
+func toTodoResponseList(todos []domain.Todo) []TodoResponse {
+	response := make([]TodoResponse, len(todos))
+
+	for i, t := range todos {
+		response[i] = TodoResponse{
+			ID:          t.ID,
+			Name:        t.Name,
+			Description: t.Description,
+			Completed:   t.Completed,
+			Version:     int(t.Version.Int64),
+			CreatedAt:   t.CreatedAt,
+		}
+	}
+
+	return response
 }

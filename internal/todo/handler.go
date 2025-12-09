@@ -5,7 +5,6 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"todoApp3/internal/domain"
 	"todoApp3/internal/httpx"
 
 	"github.com/go-playground/validator/v10"
@@ -51,10 +50,12 @@ func (h *Handler) GetTodos(e echo.Context) error {
 		return httpx.HandlerError(e, err)
 	}
 
+	todoResponse := toTodoResponseList(todos)
+
 	totalPages := int(math.Ceil(float64(totalCount) / float64(limit)))
 
 	response := PaginatedResponse{
-		Data: todos,
+		Data: todoResponse,
 		Meta: PaginationMeta{
 			CurrentPage: page,
 			Limit:       limit,
@@ -76,7 +77,7 @@ func (h *Handler) CreateTodo(e echo.Context) error {
 	dto := CreateTodoRequest{}
 
 	if err := e.Bind(&dto); err != nil {
-		return e.JSON(http.StatusBadRequest, domain.InvalidInput)
+		return httpx.BindErrorResponse(e, err)
 	}
 
 	if err := h.validator.Struct(&dto); err != nil {
@@ -95,14 +96,39 @@ func (h *Handler) CreateTodo(e echo.Context) error {
 		return httpx.HandlerError(e, err)
 	}
 
-	detailResponse := TodoDetailResponse{
+	detailResponse := TodoResponse{
 		Name:        todo.Name,
 		Description: todo.Description,
 		ID:          todo.ID,
 		Completed:   todo.Completed,
 		CreatedAt:   todo.CreatedAt,
+		Version:     int(todo.Version.Int64),
 	}
 
 	return e.JSON(http.StatusCreated, detailResponse)
+
+}
+
+func (h *Handler) DeleteTodo(e echo.Context) error {
+	idStr := e.Param("id")
+	id, err := strconv.Atoi(idStr)
+
+	if err != nil || id < 1 {
+		return e.JSON(http.StatusBadRequest, httpx.ResponseError{
+			Message: "Invalid ID format. ID must be a positive number.",
+		})
+	}
+
+	userID, ok := e.Get("userID").(uint)
+
+	if !ok {
+		return e.JSON(http.StatusUnauthorized, httpx.ResponseError{Message: "Unauthorized"})
+	}
+
+	if err := h.service.DeleteTodo(e.Request().Context(), userID, uint(id)); err != nil {
+		return httpx.HandlerError(e, err)
+	}
+
+	return e.NoContent(http.StatusNoContent)
 
 }

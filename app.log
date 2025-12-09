@@ -1,0 +1,1 @@
+{"time":"2025-12-09T14:26:18.2304999+03:00","level":"ERROR","msg":"database error during todo deletion","component":"todoRepository","todo_id":42,"user_id":2,"error":"invalid value, should be pointer to struct or slice"}
