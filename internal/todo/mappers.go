@@ -1,8 +1,8 @@
 package todo
 
-func UpdateRequestToUpdateInput(todoID int, updateDTO *UpdateRequest) *UpdateTodoInput {
+func UpdateRequestToUpdateInput(todoID uint, updateDTO *UpdateRequest) *UpdateTodoInput {
 	return &UpdateTodoInput{
-		ID:          uint(todoID),
+		ID:          todoID,
 		Name:        updateDTO.Name,
 		Description: updateDTO.Description,
 		Completed:   *updateDTO.Completed,

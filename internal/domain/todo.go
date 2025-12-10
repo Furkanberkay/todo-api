@@ -27,3 +27,4 @@ type TodoRepository interface {
 
 var ErrTodoNotFound = errors.New("todo not found")
 var ErrConflict = errors.New("data has been modified by another user")
+var ErrInvalidID = errors.New("invalid id")

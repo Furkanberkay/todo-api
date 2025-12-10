@@ -39,11 +39,7 @@ func (h *Handler) GetTodos(e echo.Context) error {
 		limit = 10
 	}
 
-	userID, ok := e.Get("userID").(uint)
-	if !ok {
-		h.logger.Error("userID not found in context")
-		return e.JSON(http.StatusUnauthorized, echo.Map{"error": "unauthorized"})
-	}
+	userID := httpx.GetClaimsUserID(e)
 
 	todos, totalCount, err := h.service.GetTodos(e.Request().Context(), page, limit, userID)
 	if err != nil {
@@ -68,11 +64,7 @@ func (h *Handler) GetTodos(e echo.Context) error {
 }
 
 func (h *Handler) CreateTodo(e echo.Context) error {
-	userID, ok := e.Get("userID").(uint)
-	if !ok {
-		h.logger.Error("userID not found in context")
-		return e.JSON(http.StatusUnauthorized, echo.Map{"error": "unauthorized"})
-	}
+	userID := httpx.GetClaimsUserID(e)
 
 	dto := CreateTodoRequest{}
 
@@ -110,22 +102,16 @@ func (h *Handler) CreateTodo(e echo.Context) error {
 }
 
 func (h *Handler) DeleteTodo(e echo.Context) error {
-	idStr := e.Param("id")
-	id, err := strconv.Atoi(idStr)
 
-	if err != nil || id < 1 {
-		return e.JSON(http.StatusBadRequest, httpx.ResponseError{
-			Message: "Invalid ID format. ID must be a positive number.",
-		})
+	id, err := httpx.GetIDParam(e, "id")
+
+	if err != nil {
+		return httpx.HandlerError(e, err)
 	}
 
-	userID, ok := e.Get("userID").(uint)
+	userID := httpx.GetClaimsUserID(e)
 
-	if !ok {
-		return e.JSON(http.StatusUnauthorized, httpx.ResponseError{Message: "Unauthorized"})
-	}
-
-	if err := h.service.DeleteTodo(e.Request().Context(), userID, uint(id)); err != nil {
+	if err := h.service.DeleteTodo(e.Request().Context(), userID, id); err != nil {
 		return httpx.HandlerError(e, err)
 	}
 
@@ -134,22 +120,13 @@ func (h *Handler) DeleteTodo(e echo.Context) error {
 }
 
 func (h *Handler) UpdateTodo(e echo.Context) error {
-	idStr := e.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := httpx.GetIDParam(e, "id")
 
-	if err != nil || id <= 0 {
-		return e.JSON(http.StatusBadRequest, httpx.ResponseError{
-			Message: "id must be positive number",
-		})
+	if err != nil {
+		return httpx.HandlerError(e, err)
 	}
 
-	userID, ok := e.Get("userID").(uint)
-
-	if !ok {
-		return e.JSON(http.StatusUnauthorized, httpx.ResponseError{
-			Message: "UnAuthorized",
-		})
-	}
+	userID := httpx.GetClaimsUserID(e)
 
 	updateDTO := new(UpdateRequest)
 
@@ -180,4 +157,31 @@ func (h *Handler) UpdateTodo(e echo.Context) error {
 
 	return e.JSON(http.StatusOK, todoResponse)
 
+}
+
+func (h *Handler) GetTodoByID(e echo.Context) error {
+	id, err := httpx.GetIDParam(e, "id")
+
+	if err != nil {
+		return httpx.HandlerError(e, err)
+	}
+
+	userID := httpx.GetClaimsUserID(e)
+
+	todo, serviceErr := h.service.GetTodoByID(e.Request().Context(), userID, id)
+
+	if serviceErr != nil {
+		return httpx.HandlerError(e, serviceErr)
+	}
+
+	response := TodoResponse{
+		ID:          todo.ID,
+		Name:        todo.Name,
+		Description: todo.Description,
+		Completed:   todo.Completed,
+		Version:     todo.Version.Int64,
+		CreatedAt:   todo.CreatedAt,
+	}
+
+	return e.JSON(http.StatusOK, response)
 }

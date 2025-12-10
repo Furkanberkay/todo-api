@@ -40,6 +40,11 @@ func HandlerError(e echo.Context, err error) error {
 			Message: "Invalid credentials",
 		})
 
+	case errors.Is(err, domain.ErrInvalidID):
+		return e.JSON(http.StatusUnauthorized, ResponseError{
+			Message: "Invalid id",
+		})
+
 	default:
 		return e.JSON(http.StatusInternalServerError, ResponseError{
 			Message: "Internal Server Error",
