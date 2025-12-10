@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"todoApp3/config"
-	"todoApp3/internal/auth"
+	"todoApp3/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -38,7 +38,7 @@ func (m *AuthMiddleware) ValidateJwt(next echo.HandlerFunc) echo.HandlerFunc {
 
 		tokenString := authHeader[7:]
 
-		myClaim := auth.MyCustomClaim{}
+		myClaim := domain.MyCustomClaim{}
 
 		token, err := jwt.ParseWithClaims(tokenString, &myClaim, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -56,7 +56,7 @@ func (m *AuthMiddleware) ValidateJwt(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 
-		c.Set("userID", myClaim.UserID)
+		c.Set("user", &myClaim)
 
 		return next(c)
 	}

@@ -64,7 +64,7 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 		return nil, domain.ErrInvalidCredentials
 	}
 	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * time.Minute
-	claims := MyCustomClaim{
+	claims := domain.MyCustomClaim{
 		UserID: user.ID,
 		Email:  user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
