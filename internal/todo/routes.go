@@ -8,5 +8,6 @@ func (h *Handler) Routes(e *echo.Group) {
 	e.POST("/todos", h.CreateTodo)
 	e.DELETE("/todos/:id", h.DeleteTodo)
 	e.PUT("/todos/:id", h.UpdateTodo)
+	e.PATCH("/todos/:id", h.PatchTodo)
 
 }

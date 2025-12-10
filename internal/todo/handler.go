@@ -185,3 +185,49 @@ func (h *Handler) GetTodoByID(e echo.Context) error {
 
 	return e.JSON(http.StatusOK, response)
 }
+
+func (h *Handler) PatchTodo(c echo.Context) error {
+	id, err := httpx.GetIDParam(c, "id")
+
+	if err != nil {
+		return httpx.HandlerError(c, err)
+	}
+
+	userID := httpx.GetClaimsUserID(c)
+
+	patchDTO := PatchTodoRequest{}
+
+	if err := c.Bind(&patchDTO); err != nil {
+		return httpx.BindErrorResponse(c, err)
+	}
+
+	if err := h.validator.Struct(&patchDTO); err != nil {
+		validateErr := httpx.ParseValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, validateErr)
+	}
+
+	patchInput := PatchTodoInput{
+		ID:          id,
+		Name:        patchDTO.Name,
+		Description: patchDTO.Description,
+		Completed:   patchDTO.Completed,
+		Version:     patchDTO.Version,
+	}
+
+	todo, serviceErr := h.service.PatchTodo(c.Request().Context(), userID, &patchInput)
+
+	if serviceErr != nil {
+		return httpx.HandlerError(c, serviceErr)
+	}
+
+	response := TodoResponse{
+		ID:          todo.ID,
+		Name:        todo.Name,
+		Description: todo.Description,
+		Completed:   todo.Completed,
+		Version:     todo.Version.Int64,
+	}
+
+	return c.JSON(http.StatusOK, response)
+
+}

@@ -10,6 +10,13 @@ type CreateTodoRequest struct {
 	Description string `json:"description" validate:"required,min=3,max=100"`
 }
 
+type PatchTodoRequest struct {
+	Name        *string `json:"name" validate:"omitempty,min=3"`
+	Description *string `json:"description" validate:"omitempty,min=3"`
+	Completed   *bool   `json:"completed" validate:"omitempty"`
+	Version     int64   `json:"version" validate:"required"`
+}
+
 type UpdateRequest struct {
 	Name        string `json:"name" validate:"required,min=3,max=30"`
 	Description string `json:"description" validate:"required,min=3,max=100"`

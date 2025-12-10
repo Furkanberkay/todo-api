@@ -18,4 +18,5 @@ type PatchTodoInput struct {
 	Name        *string
 	Description *string
 	Completed   *bool
+	Version     int64
 }

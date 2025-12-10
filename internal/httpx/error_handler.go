@@ -54,6 +54,6 @@ func HandlerError(e echo.Context, err error) error {
 
 func BindErrorResponse(e echo.Context, err error) error {
 	return e.JSON(http.StatusBadRequest, ResponseError{
-		Message: "Invalid request format: " + err.Error(),
+		Message: "Invalid request format",
 	})
 }
