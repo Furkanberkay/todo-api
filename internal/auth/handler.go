@@ -23,9 +23,7 @@ func NewHandler(service *Service, validator *validator.Validate) *Handler {
 func (h *Handler) RegisterUser(e echo.Context) error {
 	userDTO := new(RegisterRequest)
 	if err := e.Bind(userDTO); err != nil {
-		return e.JSON(http.StatusBadRequest, map[string]string{
-			"error": "invalid request",
-		})
+		return httpx.BindErrorResponse(e, err)
 	}
 
 	if err := h.validator.Struct(userDTO); err != nil {
@@ -33,26 +31,14 @@ func (h *Handler) RegisterUser(e echo.Context) error {
 		return e.JSON(http.StatusBadRequest, validateError)
 	}
 
-	input := CreateUserInput{
-		Username: userDTO.Username,
-		Surname:  userDTO.Surname,
-		Name:     userDTO.Name,
-		Password: userDTO.Password,
-		Email:    userDTO.Email,
-	}
-	user, err := h.service.RegisterUser(e.Request().Context(), &input)
+	input := userDTO.ToRegisterInput()
+	user, err := h.service.RegisterUser(e.Request().Context(), input)
 
 	if err != nil {
 		return httpx.HandlerError(e, err)
 	}
 
-	response := RegisterResponse{
-		ID:       user.ID,
-		Name:     user.Name,
-		Surname:  user.Surname,
-		Email:    user.Email,
-		Username: user.Username,
-	}
+	response := NewRegisterResponse(user)
 
 	return e.JSON(http.StatusOK, response)
 }
@@ -69,12 +55,9 @@ func (h *Handler) Login(e echo.Context) error {
 		return e.JSON(http.StatusBadRequest, validationError)
 	}
 
-	loginInput := LoginInput{
-		Email:    dto.Email,
-		Password: dto.Password,
-	}
+	loginInput := dto.ToLoginInput()
 
-	loginOutput, errorToken := h.service.Login(e.Request().Context(), &loginInput)
+	loginOutput, errorToken := h.service.Login(e.Request().Context(), loginInput)
 
 	if errorToken != nil {
 		return httpx.HandlerError(e, errorToken)

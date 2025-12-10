@@ -38,6 +38,7 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 		return nil, domain.InternalError
 	}
 	passwordString := string(hashedPassword)
+
 	user := MapCreateUserInputToUser(createUserInput, passwordString)
 
 	if err := s.repository.RegisterUser(ctx, user); err != nil {
@@ -55,7 +56,7 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 	user, err := s.repository.GetUserByEmail(ctx, email)
 
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	password := loginInput.Password

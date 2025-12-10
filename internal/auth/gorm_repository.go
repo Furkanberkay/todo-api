@@ -23,7 +23,7 @@ func NewRepository(db *gorm.DB, logger *slog.Logger) domain.AuthRepository {
 }
 
 func (r *GormRepository) RegisterUser(ctx context.Context, user *domain.User) error {
-	result := r.db.WithContext(ctx).Create(&user)
+	result := r.db.WithContext(ctx).Create(user)
 
 	if result.Error != nil {
 		errStr := result.Error.Error()
