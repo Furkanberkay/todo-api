@@ -8,7 +8,7 @@ import (
 )
 
 func AutoMigrate(db *gorm.DB) {
-	if err := db.AutoMigrate(&domain.User{}, domain.Todo{}); err != nil {
+	if err := db.AutoMigrate(&domain.User{}, domain.Todo{}, &domain.RefreshToken{}); err != nil {
 		log.Fatalf("[database] automigrate failed: %v", err)
 	}
 

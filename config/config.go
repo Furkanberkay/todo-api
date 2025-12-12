@@ -14,6 +14,7 @@ type Config struct {
 	SecretKey            string
 	JwtExpirationMinutes int
 	AppName              string
+	RefReshExpDays       int
 }
 
 func getEnv(key, def string) string {
@@ -42,6 +43,7 @@ func Load() *Config {
 		SecretKey:            os.Getenv("SECRET_KEY"),
 		JwtExpirationMinutes: getEnvAsInt("JWT_EXPIRATION_MINUTES", 60),
 		AppName:              os.Getenv("APP_NAME"),
+		RefReshExpDays:       getEnvAsInt("REFRESH_TOKEN_TTL_DAYS", 30),
 	}
 	if cfg.SecretKey == "" {
 		log.Fatal("CRITICAL ERROR: SECRET_KEY environment variable not set! Application cannot be started.")

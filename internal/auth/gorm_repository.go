@@ -64,3 +64,31 @@ func (r *GormRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 	return user, nil
 
 }
+
+func (r *GormRepository) GetRefreshToken(ctx context.Context, oldToken *string) (*domain.RefreshToken, error) {
+
+	refreshToken := new(domain.RefreshToken)
+	if err := r.db.WithContext(ctx).First(refreshToken, "WHERE token_hash = ?", oldToken); err != nil {
+		if errors.Is(err.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+		r.logger.Error("refreshToken Error",
+			slog.String("error", err.Error.Error()))
+
+		return nil, domain.InternalError
+	}
+
+	return refreshToken, nil
+
+}
+
+func (r *GormRepository) SaveRefreshToken(ctx context.Context, token *domain.RefreshToken) error {
+	if err := r.db.WithContext(ctx).Model(&domain.RefreshToken{}).Create(token); err != nil {
+		r.logger.Error("database error during refreshToken creation",
+			slog.String("component", "Auth Repository"),
+			slog.String("error", err.Error.Error()),
+		)
+		return domain.InternalError
+	}
+	return nil
+}

@@ -10,6 +10,8 @@ import (
 type AuthRepository interface {
 	RegisterUser(ctx context.Context, auth *User) error
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetRefreshToken(ctx context.Context, oldToken *string) (*RefreshToken, error)
+	SaveRefreshToken(ctx context.Context, token *RefreshToken) error
 }
 
 type User struct {

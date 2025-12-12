@@ -2,12 +2,16 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"time"
 	"todoApp3/config"
 	"todoApp3/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -64,8 +68,21 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
-	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * time.Minute
-	claims := domain.MyCustomClaim{
+
+	output, refreshTokenErr := s.CreateTokenPair(ctx, user)
+
+	if refreshTokenErr != nil {
+		return nil, refreshTokenErr
+	}
+
+	return output, nil
+
+}
+
+func (s *Service) generateAccessToken(user *domain.User) (string, error) {
+	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * (time.Minute)
+
+	myClaim := domain.MyCustomClaim{
 		UserID: user.ID,
 		Email:  user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -75,24 +92,59 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString := jwt.NewWithClaims(jwt.SigningMethodHS256, myClaim)
+	token, err := tokenString.SignedString([]byte(s.config.SecretKey))
 
-	tokenString, signedErr := token.SignedString([]byte(s.config.SecretKey))
-
-	if signedErr != nil {
-		s.logger.Error("failed to sign token during login",
-			slog.String("error", signedErr.Error()),
-			slog.String("email", user.Email),
+	if err != nil {
+		s.logger.Error("failed to sign access token",
+			slog.String("error", err.Error()),
+			slog.String("user_id", fmt.Sprint(user.ID)),
 		)
-
-		return nil, domain.InternalError
+		return "", err
 	}
 
-	loginOutput := LoginOutput{
-		AccessToken: tokenString,
-		ExpiresIn:   s.config.JwtExpirationMinutes * 60,
+	return token, nil
+}
+
+func (s *Service) generateRefreshToken(ctx context.Context, userID uint) (string, time.Time, error) {
+	refreshToken := uuid.New().String()
+
+	hashBytes := sha256.Sum256([]byte(refreshToken))
+	tokenHashHex := hex.EncodeToString(hashBytes[:])
+
+	refreshTokenStruct := domain.RefreshToken{
+		UserID:    userID,
+		TokenHash: tokenHashHex,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * time.Duration(s.config.RefReshExpDays)),
+		Revoked:   false,
+	}
+	if err := s.repository.SaveRefreshToken(ctx, &refreshTokenStruct); err != nil {
+		return "", time.Now(), err
 	}
 
-	return &loginOutput, nil
+	return refreshToken, refreshTokenStruct.ExpiresAt, nil
+}
+
+func (s *Service) CreateTokenPair(ctx context.Context, user *domain.User) (*LoginOutput, error) {
+	accessToken, err := s.generateAccessToken(user)
+
+	if err != nil {
+		return nil, err
+	}
+	refreshToken, exp, refreshErr := s.generateRefreshToken(ctx, user.ID)
+
+	if refreshErr != nil {
+		return nil, refreshErr
+	}
+	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * (time.Minute)
+
+	output := LoginOutput{
+		RefreshToken:           refreshToken,
+		AccessToken:            accessToken,
+		ExpiresIn:              int(expirationDuration.Seconds()),
+		RefreshTokenExpiresDay: exp,
+	}
+
+	return &output, nil
 
 }

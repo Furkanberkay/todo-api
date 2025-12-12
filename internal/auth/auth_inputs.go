@@ -1,5 +1,7 @@
 package auth
 
+import "time"
+
 type CreateUserInput struct {
 	Name     string
 	Surname  string
@@ -14,6 +16,8 @@ type LoginInput struct {
 }
 
 type LoginOutput struct {
-	AccessToken string
-	ExpiresIn   int
+	AccessToken            string
+	ExpiresIn              int
+	RefreshToken           string
+	RefreshTokenExpiresDay time.Time
 }
