@@ -14,14 +14,12 @@ type PatchTodoRequest struct {
 	Name        *string `json:"name" validate:"omitempty,min=3"`
 	Description *string `json:"description" validate:"omitempty,min=3"`
 	Completed   *bool   `json:"completed" validate:"omitempty"`
-	Version     int64   `json:"version" validate:"required"`
 }
 
 type UpdateRequest struct {
 	Name        string `json:"name" validate:"required,min=3,max=30"`
 	Description string `json:"description" validate:"required,min=3,max=100"`
 	Completed   *bool  `json:"completed" validate:"required"`
-	Version     int64  `json:"version" validate:"required"`
 }
 
 type PaginationMeta struct {
@@ -42,7 +40,6 @@ type TodoResponse struct {
 	Description string    `json:"description"`
 	Completed   bool      `json:"completed"`
 	CreatedAt   time.Time `json:"createdAt,omitempty"`
-	Version     int64     `json:"version"`
 }
 
 func toTodoResponseList(todos []domain.Todo) []TodoResponse {
@@ -54,7 +51,6 @@ func toTodoResponseList(todos []domain.Todo) []TodoResponse {
 			Name:        t.Name,
 			Description: t.Description,
 			Completed:   t.Completed,
-			Version:     t.Version.Int64,
 			CreatedAt:   t.CreatedAt,
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"todoApp3/config"
 	"todoApp3/internal/auth"
 	"todoApp3/internal/database"
+	"todoApp3/internal/httpx"
 	appMw "todoApp3/internal/middleware"
 	"todoApp3/internal/todo"
 
@@ -38,14 +39,16 @@ func main() {
 	todoService := todo.NewTodoService(todoRepository, slogLogger)
 	todoHandler := todo.NewTodoHandler(todoService, slogLogger, validate)
 
-	authMiddleware := appMw.NewAuthMiddleware(cfg)
+	//authMiddleware := appMw.NewAuthMiddleware(cfg)
+	jwtVerify := httpx.NewJwtVerify(cfg.SecretKey, slogLogger)
+	authenticationMiddleware := appMw.NewAuthenticationMiddleware(jwtVerify)
 
 	e := echo.New()
 	e.Use(middleware.Recover())
 
 	api := e.Group("/api/v1")
 	protected := api.Group("")
-	protected.Use(authMiddleware.ValidateJwt)
+	protected.Use(authenticationMiddleware.Authenticate)
 
 	authHandler.Routes(api)
 	todoHandler.Routes(protected)

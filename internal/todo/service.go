@@ -64,10 +64,6 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 		return nil, err
 	}
 
-	if input.Version != todo.Version.Int64 {
-		return nil, domain.ErrConflict
-	}
-
 	todo.Name = input.Name
 	todo.Description = input.Description
 	todo.Completed = input.Completed
@@ -76,7 +72,6 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 		return nil, err
 	}
 
-	todo.Version.Int64++
 	return todo, nil
 }
 
@@ -105,13 +100,8 @@ func (s *Service) PatchTodo(ctx context.Context, userID uint, input *PatchTodoIn
 		todo.Completed = *input.Completed
 	}
 
-	if input.Version != todo.Version.Int64 {
-		return nil, domain.ErrConflict
-	}
-
 	if err := s.repository.UpdateTodo(ctx, todo); err != nil {
 		return nil, err
 	}
-	todo.Version.Int64++
 	return todo, nil
 }

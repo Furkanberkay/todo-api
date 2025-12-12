@@ -94,7 +94,6 @@ func (h *Handler) CreateTodo(e echo.Context) error {
 		ID:          todo.ID,
 		Completed:   todo.Completed,
 		CreatedAt:   todo.CreatedAt,
-		Version:     todo.Version.Int64,
 	}
 
 	return e.JSON(http.StatusCreated, detailResponse)
@@ -152,7 +151,6 @@ func (h *Handler) UpdateTodo(e echo.Context) error {
 		Name:        todo.Name,
 		Description: todo.Description,
 		Completed:   todo.Completed,
-		Version:     todo.Version.Int64,
 	}
 
 	return e.JSON(http.StatusOK, todoResponse)
@@ -179,7 +177,6 @@ func (h *Handler) GetTodoByID(e echo.Context) error {
 		Name:        todo.Name,
 		Description: todo.Description,
 		Completed:   todo.Completed,
-		Version:     todo.Version.Int64,
 		CreatedAt:   todo.CreatedAt,
 	}
 
@@ -211,7 +208,6 @@ func (h *Handler) PatchTodo(c echo.Context) error {
 		Name:        patchDTO.Name,
 		Description: patchDTO.Description,
 		Completed:   patchDTO.Completed,
-		Version:     patchDTO.Version,
 	}
 
 	todo, serviceErr := h.service.PatchTodo(c.Request().Context(), userID, &patchInput)
@@ -225,7 +221,6 @@ func (h *Handler) PatchTodo(c echo.Context) error {
 		Name:        todo.Name,
 		Description: todo.Description,
 		Completed:   todo.Completed,
-		Version:     todo.Version.Int64,
 	}
 
 	return c.JSON(http.StatusOK, response)
