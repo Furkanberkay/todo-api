@@ -25,9 +25,9 @@ func HandlerError(e echo.Context, err error) error {
 			Message: err.Error(),
 		})
 
-	case errors.Is(err, domain.ErrConflict):
-		return e.JSON(http.StatusConflict, ResponseError{
-			Message: "Data has been modified by another user. Please refresh.",
+	case errors.Is(err, domain.ErrUnAuthorized):
+		return e.JSON(http.StatusUnauthorized, ResponseError{
+			Message: "unAuthorized",
 		})
 
 	case errors.Is(err, domain.ErrTodoNotFound):
@@ -52,7 +52,7 @@ func HandlerError(e echo.Context, err error) error {
 	}
 }
 
-func BindErrorResponse(e echo.Context, err error) error {
+func BindErrorResponse(e echo.Context) error {
 	return e.JSON(http.StatusBadRequest, ResponseError{
 		Message: "Invalid request format",
 	})

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log/slog"
 	"net/http"
 	"todoApp3/internal/httpx"
 
@@ -11,19 +12,21 @@ import (
 type Handler struct {
 	service   *Service
 	validator *validator.Validate
+	logger    *slog.Logger
 }
 
-func NewHandler(service *Service, validator *validator.Validate) *Handler {
+func NewHandler(service *Service, validator *validator.Validate, logger *slog.Logger) *Handler {
 	return &Handler{
 		service:   service,
 		validator: validator,
+		logger:    logger,
 	}
 }
 
 func (h *Handler) RegisterUser(e echo.Context) error {
 	userDTO := new(RegisterRequest)
 	if err := e.Bind(userDTO); err != nil {
-		return httpx.BindErrorResponse(e, err)
+		return httpx.BindErrorResponse(e)
 	}
 
 	if err := h.validator.Struct(userDTO); err != nil {
@@ -47,7 +50,7 @@ func (h *Handler) Login(e echo.Context) error {
 
 	dto := LoginRequest{}
 	if err := e.Bind(&dto); err != nil {
-		return httpx.BindErrorResponse(e, err)
+		return httpx.BindErrorResponse(e)
 	}
 
 	if err := h.validator.Struct(&dto); err != nil {
@@ -64,11 +67,49 @@ func (h *Handler) Login(e echo.Context) error {
 	}
 
 	response := LoginResponse{
-		AccessToken: loginOutput.AccessToken,
-		TokenType:   "Bearer",
-		ExpiresIn:   loginOutput.ExpiresIn,
+		TokenType:       "Bearer",
+		AccessToken:     loginOutput.AccessToken,
+		RefreshToken:    loginOutput.RefreshToken,
+		ExpiresIn:       loginOutput.ExpiresIn,
+		RefreshTokenExp: loginOutput.RefreshExpiresAt,
 	}
 
 	return e.JSON(http.StatusOK, response)
 
+}
+
+func (h *Handler) Refresh(c echo.Context) error {
+	dto := RefreshTokenRequest{}
+	if err := c.Bind(&dto); err != nil {
+		return httpx.BindErrorResponse(c)
+	}
+
+	if err := h.validator.Struct(&dto); err != nil {
+		validateErr := httpx.ParseValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, validateErr)
+	}
+
+	serviceOutput, err := h.service.RefreshTokens(c.Request().Context(), dto.RefreshToken)
+
+	if err != nil {
+		return httpx.HandlerError(c, err)
+	}
+
+	if serviceOutput == nil {
+		h.logger.Error("Critical: Service returned nil output without error")
+
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+	}
+
+	refreshResponse := LoginResponse{
+		TokenType:       "Bearer",
+		AccessToken:     serviceOutput.AccessToken,
+		RefreshToken:    serviceOutput.RefreshToken,
+		ExpiresIn:       serviceOutput.ExpiresIn,
+		RefreshTokenExp: serviceOutput.RefreshExpiresAt,
+	}
+
+	return c.JSON(http.StatusOK, &refreshResponse)
 }

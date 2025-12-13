@@ -16,8 +16,8 @@ type LoginInput struct {
 }
 
 type LoginOutput struct {
-	AccessToken     string
-	ExpiresIn       int
-	RefreshToken    string
-	RefreshTokenExp time.Time
+	AccessToken      string
+	ExpiresIn        int
+	RefreshToken     string
+	RefreshExpiresAt time.Time
 }

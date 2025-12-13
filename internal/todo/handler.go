@@ -69,7 +69,7 @@ func (h *Handler) CreateTodo(e echo.Context) error {
 	dto := CreateTodoRequest{}
 
 	if err := e.Bind(&dto); err != nil {
-		return httpx.BindErrorResponse(e, err)
+		return httpx.BindErrorResponse(e)
 	}
 
 	if err := h.validator.Struct(&dto); err != nil {
@@ -130,7 +130,7 @@ func (h *Handler) UpdateTodo(e echo.Context) error {
 	updateDTO := new(UpdateRequest)
 
 	if err := e.Bind(updateDTO); err != nil {
-		return httpx.BindErrorResponse(e, err)
+		return httpx.BindErrorResponse(e)
 	}
 
 	if err := h.validator.Struct(updateDTO); err != nil {
@@ -195,7 +195,7 @@ func (h *Handler) PatchTodo(c echo.Context) error {
 	patchDTO := PatchTodoRequest{}
 
 	if err := c.Bind(&patchDTO); err != nil {
-		return httpx.BindErrorResponse(c, err)
+		return httpx.BindErrorResponse(c)
 	}
 
 	if err := h.validator.Struct(&patchDTO); err != nil {

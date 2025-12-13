@@ -83,10 +83,10 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * (time.Minute)
 
 	output := LoginOutput{
-		RefreshToken:    refreshToken,
-		AccessToken:     accessToken,
-		ExpiresIn:       int(expirationDuration.Seconds()),
-		RefreshTokenExp: refreshTokenModel.ExpiresAt,
+		RefreshToken:     refreshToken,
+		AccessToken:      accessToken,
+		ExpiresIn:        int(expirationDuration.Seconds()),
+		RefreshExpiresAt: refreshTokenModel.ExpiresAt,
 	}
 
 	return &output, nil
@@ -139,21 +139,21 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 	hashBytes := sha256.Sum256([]byte(refreshToken))
 	tokenHashHex := hex.EncodeToString(hashBytes[:])
 
-	oldToken, err := s.repository.GetRefreshToken(ctx, &tokenHashHex)
+	oldTokenModel, err := s.repository.GetRefreshToken(ctx, &tokenHashHex)
 
 	if err != nil {
 		return nil, domain.ErrUnAuthorized
 	}
 
-	if time.Now().After(oldToken.ExpiresAt) {
+	if time.Now().After(oldTokenModel.ExpiresAt) {
 		return nil, domain.ErrUnAuthorized
 	}
 
-	if oldToken.Revoked != nil {
+	if oldTokenModel.Revoked != nil {
 		return nil, domain.ErrUnAuthorized
 	}
 
-	user, serviceErr := s.repository.GetUserByUserID(ctx, oldToken.UserID)
+	user, serviceErr := s.repository.GetUserByUserID(ctx, oldTokenModel.UserID)
 
 	if serviceErr != nil {
 		return nil, err
@@ -165,19 +165,19 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 		return nil, accessTokenErr
 	}
 
-	newRefreshToken, refreshTokenModel := s.createRefreshTokenModel(user.ID)
+	newRefreshToken, newRefreshTokenModel := s.createRefreshTokenModel(user.ID)
 
-	if err := s.repository.RotateRefreshToken(ctx, oldToken.ID, refreshTokenModel); err != nil {
+	if err := s.repository.RotateRefreshToken(ctx, oldTokenModel.ID, newRefreshTokenModel); err != nil {
 		return nil, err
 	}
 
 	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * (time.Minute)
 
 	output := LoginOutput{
-		RefreshToken:    newRefreshToken,
-		AccessToken:     accessToken,
-		ExpiresIn:       int(expirationDuration.Seconds()),
-		RefreshTokenExp: refreshTokenModel.ExpiresAt,
+		RefreshToken:     newRefreshToken,
+		AccessToken:      accessToken,
+		ExpiresIn:        int(expirationDuration.Seconds()),
+		RefreshExpiresAt: newRefreshTokenModel.ExpiresAt,
 	}
 
 	return &output, nil

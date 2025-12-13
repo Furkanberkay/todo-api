@@ -33,7 +33,7 @@ func main() {
 
 	authRepository := auth.NewRepository(db, slogLogger)
 	AuthService := auth.NewService(authRepository, cfg, slogLogger)
-	authHandler := auth.NewHandler(AuthService, validate)
+	authHandler := auth.NewHandler(AuthService, validate, slogLogger)
 
 	todoRepository := todo.NewRepository(db, slogLogger)
 	todoService := todo.NewTodoService(todoRepository, slogLogger)

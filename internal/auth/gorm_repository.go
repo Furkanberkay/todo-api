@@ -84,7 +84,7 @@ func (r *GormRepository) GetRefreshToken(ctx context.Context, oldToken *string) 
 
 }
 
-func (r *GormRepository) RotateRefreshToken(ctx context.Context, oldTokenID uint, newToken *domain.RefreshToken) error {
+func (r *GormRepository) RotateRefreshToken(ctx context.Context, oldTokenID uint, newTokenModel *domain.RefreshToken) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now()
 		if err := tx.Model(&domain.RefreshToken{}).Where("id=?", oldTokenID).Update("revoked", &now).Error; err != nil {
@@ -93,7 +93,7 @@ func (r *GormRepository) RotateRefreshToken(ctx context.Context, oldTokenID uint
 			return domain.InternalError
 		}
 
-		if err := tx.Model(&domain.RefreshToken{}).Create(newToken).Error; err != nil {
+		if err := tx.Model(&domain.RefreshToken{}).Create(newTokenModel).Error; err != nil {
 			r.logger.Error("failed to create new token within tx",
 				slog.String("error", err.Error()))
 			return domain.InternalError

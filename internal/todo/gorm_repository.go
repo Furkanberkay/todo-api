@@ -107,7 +107,6 @@ func (r *Repository) UpdateTodo(ctx context.Context, todo *domain.Todo) error {
 			return domain.ErrTodoNotFound
 		}
 
-		return domain.ErrConflict
 	}
 
 	return nil

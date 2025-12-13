@@ -1,5 +1,7 @@
 package auth
 
+import "time"
+
 type RegisterRequest struct {
 	Name     string `json:"name" validate:"required,min=2,max=100"`
 	Surname  string `json:"surname" validate:"required,min=2,max=100"`
@@ -22,7 +24,13 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken string `json:"accessToken"`
-	TokenType   string `json:"tokenType"`
-	ExpiresIn   int    `json:"expiresIn"`
+	AccessToken     string    `json:"accessToken"`
+	TokenType       string    `json:"tokenType"`
+	ExpiresIn       int       `json:"expiresIn"`
+	RefreshToken    string    `json:"refreshToken"`
+	RefreshTokenExp time.Time `json:"refreshTokenExpiresAt"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refreshToken" validate:"required"`
 }
