@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"time"
 	"todoApp3/internal/domain"
 
 	"gorm.io/gorm"
@@ -68,12 +69,13 @@ func (r *GormRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 func (r *GormRepository) GetRefreshToken(ctx context.Context, oldToken *string) (*domain.RefreshToken, error) {
 
 	refreshToken := new(domain.RefreshToken)
-	if err := r.db.WithContext(ctx).First(refreshToken, "WHERE token_hash = ?", oldToken); err != nil {
-		if errors.Is(err.Error, gorm.ErrRecordNotFound) {
+	if result := r.db.WithContext(ctx).First(refreshToken, "token_hash = ?", oldToken); result.Error != nil {
+
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, domain.ErrUserNotFound
 		}
 		r.logger.Error("refreshToken Error",
-			slog.String("error", err.Error.Error()))
+			slog.String("error", result.Error.Error()))
 
 		return nil, domain.InternalError
 	}
@@ -82,12 +84,48 @@ func (r *GormRepository) GetRefreshToken(ctx context.Context, oldToken *string) 
 
 }
 
-func (r *GormRepository) SaveRefreshToken(ctx context.Context, token *domain.RefreshToken) error {
-	if err := r.db.WithContext(ctx).Model(&domain.RefreshToken{}).Create(token); err != nil {
-		r.logger.Error("database error during refreshToken creation",
-			slog.String("component", "Auth Repository"),
-			slog.String("error", err.Error.Error()),
+func (r *GormRepository) RotateRefreshToken(ctx context.Context, oldTokenID uint, newToken *domain.RefreshToken) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		if err := tx.Model(&domain.RefreshToken{}).Where("id=?", oldTokenID).Update("revoked", &now).Error; err != nil {
+			r.logger.Error("failed to revoke old token",
+				slog.String("error", err.Error()))
+			return domain.InternalError
+		}
+
+		if err := tx.Model(&domain.RefreshToken{}).Create(newToken).Error; err != nil {
+			r.logger.Error("failed to create new token within tx",
+				slog.String("error", err.Error()))
+			return domain.InternalError
+		}
+
+		return nil
+	})
+}
+
+func (r *GormRepository) GetUserByUserID(ctx context.Context, userID uint) (*domain.User, error) {
+	user := new(domain.User)
+
+	if result := r.db.WithContext(ctx).First(user, "id = ?", userID); result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+
+		r.logger.Error("failed to find user",
+			slog.Int("user_id", int(userID)),
+			slog.String("error", result.Error.Error()),
 		)
+		return nil, domain.InternalError
+	}
+	return user, nil
+}
+
+func (r *GormRepository) SaveRefreshToken(ctx context.Context, refreshTokenModel *domain.RefreshToken) error {
+	if err := r.db.WithContext(ctx).Model(&domain.RefreshToken{}).Create(refreshTokenModel).Error; err != nil {
+		r.logger.Error("refreshToken create error",
+			slog.String("component", "gormRepository/saveRefreshToken"),
+			slog.String("error", err.Error()))
+
 		return domain.InternalError
 	}
 	return nil

@@ -11,7 +11,9 @@ type AuthRepository interface {
 	RegisterUser(ctx context.Context, auth *User) error
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetRefreshToken(ctx context.Context, oldToken *string) (*RefreshToken, error)
-	SaveRefreshToken(ctx context.Context, token *RefreshToken) error
+	GetUserByUserID(ctx context.Context, userID uint) (*User, error)
+	RotateRefreshToken(ctx context.Context, oldTokenID uint, newToken *RefreshToken) error
+	SaveRefreshToken(ctx context.Context, refreshTokenModel *RefreshToken) error
 }
 
 type User struct {

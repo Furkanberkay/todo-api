@@ -11,5 +11,5 @@ type RefreshToken struct {
 	UserID    uint      `gorm:"index;not null"`
 	TokenHash string    `gorm:"size:64;uniqueIndex;not null"`
 	ExpiresAt time.Time `gorm:"index;not null"`
-	Revoked   bool
+	Revoked   *time.Time
 }

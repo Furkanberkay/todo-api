@@ -69,13 +69,27 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	output, refreshTokenErr := s.CreateTokenPair(ctx, user)
+	accessToken, accessTokenErr := s.generateAccessToken(user)
 
-	if refreshTokenErr != nil {
-		return nil, refreshTokenErr
+	if accessTokenErr != nil {
+		return nil, accessTokenErr
 	}
 
-	return output, nil
+	refreshToken, refreshTokenModel := s.createRefreshTokenModel(user.ID)
+
+	if err := s.repository.SaveRefreshToken(ctx, refreshTokenModel); err != nil {
+		return nil, err
+	}
+	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * (time.Minute)
+
+	output := LoginOutput{
+		RefreshToken:    refreshToken,
+		AccessToken:     accessToken,
+		ExpiresIn:       int(expirationDuration.Seconds()),
+		RefreshTokenExp: refreshTokenModel.ExpiresAt,
+	}
+
+	return &output, nil
 
 }
 
@@ -106,7 +120,7 @@ func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 	return token, nil
 }
 
-func (s *Service) generateRefreshToken(ctx context.Context, userID uint) (string, time.Time, error) {
+func (s *Service) createRefreshTokenModel(userID uint) (string, *domain.RefreshToken) {
 	refreshToken := uuid.New().String()
 
 	hashBytes := sha256.Sum256([]byte(refreshToken))
@@ -116,33 +130,54 @@ func (s *Service) generateRefreshToken(ctx context.Context, userID uint) (string
 		UserID:    userID,
 		TokenHash: tokenHashHex,
 		ExpiresAt: time.Now().Add(time.Hour * 24 * time.Duration(s.config.RefReshExpDays)),
-		Revoked:   false,
-	}
-	if err := s.repository.SaveRefreshToken(ctx, &refreshTokenStruct); err != nil {
-		return "", time.Now(), err
 	}
 
-	return refreshToken, refreshTokenStruct.ExpiresAt, nil
+	return refreshToken, &refreshTokenStruct
 }
 
-func (s *Service) CreateTokenPair(ctx context.Context, user *domain.User) (*LoginOutput, error) {
-	accessToken, err := s.generateAccessToken(user)
+func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*LoginOutput, error) {
+	hashBytes := sha256.Sum256([]byte(refreshToken))
+	tokenHashHex := hex.EncodeToString(hashBytes[:])
+
+	oldToken, err := s.repository.GetRefreshToken(ctx, &tokenHashHex)
 
 	if err != nil {
+		return nil, domain.ErrUnAuthorized
+	}
+
+	if time.Now().After(oldToken.ExpiresAt) {
+		return nil, domain.ErrUnAuthorized
+	}
+
+	if oldToken.Revoked != nil {
+		return nil, domain.ErrUnAuthorized
+	}
+
+	user, serviceErr := s.repository.GetUserByUserID(ctx, oldToken.UserID)
+
+	if serviceErr != nil {
 		return nil, err
 	}
-	refreshToken, exp, refreshErr := s.generateRefreshToken(ctx, user.ID)
 
-	if refreshErr != nil {
-		return nil, refreshErr
+	accessToken, accessTokenErr := s.generateAccessToken(user)
+
+	if accessTokenErr != nil {
+		return nil, accessTokenErr
 	}
+
+	newRefreshToken, refreshTokenModel := s.createRefreshTokenModel(user.ID)
+
+	if err := s.repository.RotateRefreshToken(ctx, oldToken.ID, refreshTokenModel); err != nil {
+		return nil, err
+	}
+
 	expirationDuration := time.Duration(s.config.JwtExpirationMinutes) * (time.Minute)
 
 	output := LoginOutput{
-		RefreshToken:           refreshToken,
-		AccessToken:            accessToken,
-		ExpiresIn:              int(expirationDuration.Seconds()),
-		RefreshTokenExpiresDay: exp,
+		RefreshToken:    newRefreshToken,
+		AccessToken:     accessToken,
+		ExpiresIn:       int(expirationDuration.Seconds()),
+		RefreshTokenExp: refreshTokenModel.ExpiresAt,
 	}
 
 	return &output, nil
