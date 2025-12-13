@@ -67,11 +67,11 @@ func (h *Handler) Login(e echo.Context) error {
 	}
 
 	response := LoginResponse{
-		TokenType:       "Bearer",
-		AccessToken:     loginOutput.AccessToken,
-		RefreshToken:    loginOutput.RefreshToken,
-		ExpiresIn:       loginOutput.ExpiresIn,
-		RefreshTokenExp: loginOutput.RefreshExpiresAt,
+		TokenType:            "Bearer",
+		AccessToken:          loginOutput.AccessToken,
+		RefreshToken:         loginOutput.RefreshToken,
+		AccessTokenExpiresIn: loginOutput.ExpiresIn,
+		RefreshTokenExp:      loginOutput.RefreshExpiresAt,
 	}
 
 	return e.JSON(http.StatusOK, response)
@@ -104,11 +104,11 @@ func (h *Handler) Refresh(c echo.Context) error {
 	}
 
 	refreshResponse := LoginResponse{
-		TokenType:       "Bearer",
-		AccessToken:     serviceOutput.AccessToken,
-		RefreshToken:    serviceOutput.RefreshToken,
-		ExpiresIn:       serviceOutput.ExpiresIn,
-		RefreshTokenExp: serviceOutput.RefreshExpiresAt,
+		TokenType:            "Bearer",
+		AccessToken:          serviceOutput.AccessToken,
+		RefreshToken:         serviceOutput.RefreshToken,
+		AccessTokenExpiresIn: serviceOutput.ExpiresIn,
+		RefreshTokenExp:      serviceOutput.RefreshExpiresAt,
 	}
 
 	return c.JSON(http.StatusOK, &refreshResponse)

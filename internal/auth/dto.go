@@ -24,11 +24,11 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken     string    `json:"accessToken"`
-	TokenType       string    `json:"tokenType"`
-	ExpiresIn       int       `json:"expiresIn"`
-	RefreshToken    string    `json:"refreshToken"`
-	RefreshTokenExp time.Time `json:"refreshTokenExpiresAt"`
+	AccessToken          string    `json:"accessToken"`
+	TokenType            string    `json:"tokenType"`
+	AccessTokenExpiresIn int       `json:"accessTokenExpiresIn"`
+	RefreshToken         string    `json:"refreshToken"`
+	RefreshTokenExp      time.Time `json:"refreshTokenExpiresAt"`
 }
 
 type RefreshTokenRequest struct {
