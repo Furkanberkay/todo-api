@@ -11,17 +11,15 @@ import (
 )
 
 type MockVerifier struct {
-	Success bool
+	ShouldFail bool
 }
 
 func (m *MockVerifier) Verify(ctx context.Context, tokenString string) (*domain.MyCustomClaim, error) {
-	myClaim := domain.MyCustomClaim{
-		UserID: 1,
-		Email:  "berkay123@hotmail.com",
+	if m.ShouldFail {
+		return nil, domain.ErrInvalidToken
 	}
 
-	m.Success = true
-	return &myClaim, nil
+	return &domain.MyCustomClaim{UserID: 1}, nil
 }
 
 func TestMockMiddleware(t *testing.T) {
@@ -45,7 +43,7 @@ func TestMockMiddleware(t *testing.T) {
 
 		}
 
-		middleware := AuthenticationMiddleware{Verify: &MockVerifier{}}
+		middleware := AuthenticationMiddleware{Verify: &MockVerifier{ShouldFail: false}}
 		chain := middleware.Authenticate(newHandler)
 		err := chain(c)
 
@@ -56,5 +54,28 @@ func TestMockMiddleware(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Errorf("ERROR! Expected 200 (OK), Received %d", rec.Code)
 		}
+	})
+
+	t.Run("fail", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.Header.Set("Authorization", "Bearer naber")
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		handler := func(c echo.Context) error {
+			t.Error("ERROR : Next Handler ran while the token was invalid! There's a security vulnerability!")
+			return nil
+		}
+
+		middleware := AuthenticationMiddleware{Verify: &MockVerifier{ShouldFail: true}}
+
+		chain := middleware.Authenticate(handler)
+		_ = chain(c)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("HATA! Beklenen 401 (Unauthorized), Gelen Kod: %d", rec.Code)
+		}
+
 	})
 }

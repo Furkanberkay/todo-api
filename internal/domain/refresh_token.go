@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -13,3 +14,5 @@ type RefreshToken struct {
 	ExpiresAt time.Time `gorm:"index;not null"`
 	Revoked   *time.Time
 }
+
+var ErrInvalidToken = errors.New("invalid token")
