@@ -9,7 +9,6 @@ import (
 
 func GetClaims(c echo.Context) *domain.MyCustomClaim {
 	return c.Get("user").(*domain.MyCustomClaim)
-
 }
 
 func GetClaimsUserID(c echo.Context) uint {

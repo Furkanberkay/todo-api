@@ -36,10 +36,10 @@ func (j *JwtVerify) Verify(ctx context.Context, tokenString string) (*domain.MyC
 		return nil, domain.ErrUnAuthorized
 	}
 
-	tokenstr := tokenString[7:]
+	tokenStr := tokenString[7:]
 	myClaim := domain.MyCustomClaim{}
 
-	token, err := jwt.ParseWithClaims(tokenstr, &myClaim, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &myClaim, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			j.logger.Error("unexpected signing method",
 				"method", token.Header["alg"],
