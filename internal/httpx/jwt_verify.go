@@ -51,6 +51,7 @@ func (j *JwtVerify) Verify(ctx context.Context, tokenString string) (*domain.MyC
 	})
 
 	if err != nil {
+		
 		j.logger.Warn("jwt parse/validate failed",
 			"error", err.Error(),
 			"component", "jwt_verify",

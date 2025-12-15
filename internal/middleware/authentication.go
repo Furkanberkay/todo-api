@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"todoApp3/internal/domain"
+	"todoApp3/internal/httpx"
 
 	"github.com/labstack/echo/v4"
 )
@@ -23,7 +24,7 @@ func (a *AuthenticationMiddleware) Authenticate(next echo.HandlerFunc) echo.Hand
 		claim, err := a.Verify.Verify(c.Request().Context(), tokenString)
 
 		if err != nil {
-			return c.JSON(http.StatusUnauthorized, domain.ErrUnAuthorized.Error())
+			return c.JSON(http.StatusUnauthorized, httpx.ResponseError{Message: domain.ErrUnAuthorized.Error()})
 		}
 
 		c.Set("user", claim)

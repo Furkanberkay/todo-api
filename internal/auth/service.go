@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 	"todoApp3/config"
 	"todoApp3/internal/domain"
@@ -136,6 +137,11 @@ func (s *Service) createRefreshTokenModel(userID uint) (string, *domain.RefreshT
 }
 
 func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*LoginOutput, error) {
+
+	if strings.TrimSpace(refreshToken) == "" {
+		return nil, domain.ErrUnAuthorized
+	}
+
 	hashBytes := sha256.Sum256([]byte(refreshToken))
 	tokenHashHex := hex.EncodeToString(hashBytes[:])
 
@@ -156,7 +162,7 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 	user, serviceErr := s.repository.GetUserByUserID(ctx, oldTokenModel.UserID)
 
 	if serviceErr != nil {
-		return nil, err
+		return nil, serviceErr
 	}
 
 	accessToken, accessTokenErr := s.generateAccessToken(user)

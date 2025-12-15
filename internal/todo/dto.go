@@ -23,9 +23,9 @@ type UpdateRequest struct {
 }
 
 type PaginationMeta struct {
-	CurrentPage int   `json:"current_page"`
-	TotalPages  int   `json:"total_pages"`
-	TotalItems  int64 `json:"total_items"`
+	CurrentPage int   `json:"currentPage"`
+	TotalPages  int   `json:"totalPages"`
+	TotalItems  int64 `json:"totalItems"`
 	Limit       int   `json:"limit"`
 }
 
