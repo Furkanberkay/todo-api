@@ -16,6 +16,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type AuthenticationService interface {
+	RegisterUser(ctx context.Context, input *CreateUserInput) (*domain.User, error)
+	Login(ctx context.Context, loginInput *LoginInput) (*LoginOutput, error)
+	RefreshTokens(ctx context.Context, refreshToken string) (*LoginOutput, error)
+}
+
 type Service struct {
 	repository domain.AuthRepository
 	config     *config.Config

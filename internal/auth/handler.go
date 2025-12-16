@@ -10,12 +10,12 @@ import (
 )
 
 type Handler struct {
-	service   *Service
+	service   AuthenticationService
 	validator *validator.Validate
 	logger    *slog.Logger
 }
 
-func NewHandler(service *Service, validator *validator.Validate, logger *slog.Logger) *Handler {
+func NewHandler(service AuthenticationService, validator *validator.Validate, logger *slog.Logger) *Handler {
 	return &Handler{
 		service:   service,
 		validator: validator,
@@ -43,7 +43,7 @@ func (h *Handler) RegisterUser(e echo.Context) error {
 
 	response := NewRegisterResponse(user)
 
-	return e.JSON(http.StatusOK, response)
+	return e.JSON(http.StatusCreated, response)
 }
 
 func (h *Handler) Login(e echo.Context) error {
