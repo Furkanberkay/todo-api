@@ -1,12 +1,14 @@
 package main
 
 import (
+	"log"
 	"log/slog"
 	"os"
 	"time"
 	"todoApp3/config"
 	"todoApp3/internal/auth"
 	"todoApp3/internal/database"
+	"todoApp3/internal/domain"
 	"todoApp3/internal/httpx"
 	appMw "todoApp3/internal/middleware"
 	"todoApp3/internal/todo"
@@ -31,8 +33,12 @@ func main() {
 	slog.SetDefault(slogLogger)
 	validate := validator.New()
 
+	smsChannel := make(chan domain.SmsJob, 100)
+
+	go auth.StartSmsWorker(smsChannel)
+
 	authRepository := auth.NewRepository(db, slogLogger)
-	AuthService := auth.NewService(authRepository, cfg, slogLogger)
+	AuthService := auth.NewService(authRepository, cfg, slogLogger, smsChannel)
 	authHandler := auth.NewHandler(AuthService, validate, slogLogger)
 
 	todoRepository := todo.NewRepository(db, slogLogger)
@@ -53,6 +59,9 @@ func main() {
 	authHandler.Routes(api)
 	todoHandler.Routes(protected)
 
-	e.Start(cfg.HTTPAddr)
+	err := e.Start(cfg.HTTPAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }

@@ -26,13 +26,15 @@ type Service struct {
 	repository domain.AuthRepository
 	config     *config.Config
 	logger     *slog.Logger
+	smsChannel chan<- domain.SmsJob
 }
 
-func NewService(repository domain.AuthRepository, config *config.Config, logger *slog.Logger) *Service {
+func NewService(repository domain.AuthRepository, config *config.Config, logger *slog.Logger, smsChannel chan<- domain.SmsJob) *Service {
 	return &Service{
 		repository: repository,
 		config:     config,
 		logger:     logger,
+		smsChannel: smsChannel,
 	}
 }
 
@@ -55,6 +57,8 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 	if err := s.repository.RegisterUser(ctx, user); err != nil {
 		return nil, err
 	}
+
+	s.smsChannel <- domain.SmsJob{Email: user.Email, Message: "Welcome", Name: user.Name, Surname: user.Surname}
 
 	return user, nil
 
@@ -152,7 +156,6 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 	tokenHashHex := hex.EncodeToString(hashBytes[:])
 
 	oldTokenModel, err := s.repository.GetRefreshToken(ctx, &tokenHashHex)
-
 	if err != nil {
 		return nil, domain.ErrUnAuthorized
 	}
@@ -166,13 +169,11 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 	}
 
 	user, serviceErr := s.repository.GetUserByUserID(ctx, oldTokenModel.UserID)
-
 	if serviceErr != nil {
 		return nil, serviceErr
 	}
 
 	accessToken, accessTokenErr := s.generateAccessToken(user)
-
 	if accessTokenErr != nil {
 		return nil, accessTokenErr
 	}
