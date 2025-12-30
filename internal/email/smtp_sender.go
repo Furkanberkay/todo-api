@@ -1,7 +1,11 @@
 package email
 
 import (
-	"gopkg.in/gomail.v2"
+	"context"
+	"log/slog"
+	"time"
+
+	"github.com/wneessen/go-mail"
 )
 
 type SmtpRequest struct {
@@ -10,19 +14,39 @@ type SmtpRequest struct {
 	Body    string
 }
 
-func Send(req *SmtpRequest) error {
-	m := gomail.NewMessage()
-	m.SetHeader("From", "berkay@test.com")
-	m.SetHeader("To", req.To)
-	m.SetHeader("Subject", req.Subject)
-	m.SetBody("text/html", req.Body)
+func Send(ctx context.Context, req *SmtpRequest, logger *slog.Logger) error {
+	m := mail.NewMsg()
+	if err := m.From("berkay_test@test.com"); err != nil {
+		logger.Error("failed to set from address",
+			slog.String("message", err.Error()))
+		return err
+	}
+	if err := m.To(req.To); err != nil {
+		logger.Error("failed to set to address",
+			slog.String("message", err.Error()))
+		return err
+	}
+	m.Subject(req.Subject)
+	m.SetBodyString(mail.TypeTextHTML, req.Body)
 
-	d := gomail.NewDialer(
-		"sandbox.smtp.mailtrap.io",
-		2525,
-		"40247f05c4d5be",
-		"9e27e49a87793e",
+	c, err := mail.NewClient("sandbox.smtp.mailtrap.io",
+		mail.WithPort(2525),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithUsername("40247f05c4d5be"),
+		mail.WithPassword("9e27e49a87793e"),
+		mail.WithTimeout(10*time.Second),
 	)
+	if err != nil {
+		logger.Error("failed to create mail client",
+			slog.String("message", err.Error()))
+		return err
+	}
 
-	return d.DialAndSend(m)
+	if err := c.DialAndSendWithContext(ctx, m); err != nil {
+		logger.Error("failed to send email",
+			slog.String("message", err.Error()))
+		return err
+	}
+	return nil
+
 }

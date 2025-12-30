@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 	"todoApp3/config"
 	"todoApp3/internal/auth"
@@ -20,6 +26,10 @@ import (
 )
 
 func main() {
+
+	ctxApp, cancelApp := context.WithCancel(context.Background())
+	defer cancelApp()
+
 	cfg := config.Load()
 	db := database.NewSQLite(cfg.SQLitePath)
 
@@ -34,8 +44,12 @@ func main() {
 	validate := validator.New()
 
 	smsChannel := make(chan domain.SmsJob, 100)
+	wg := sync.WaitGroup{}
 
-	go auth.StartSmsWorker(smsChannel)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go auth.StartSmsWorker(ctxApp, smsChannel, &wg, slogLogger)
+	}
 
 	authRepository := auth.NewRepository(db, slogLogger)
 	AuthService := auth.NewService(authRepository, cfg, slogLogger, smsChannel)
@@ -59,9 +73,23 @@ func main() {
 	authHandler.Routes(api)
 	todoHandler.Routes(protected)
 
-	err := e.Start(cfg.HTTPAddr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		if err := e.Start(cfg.HTTPAddr); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	shutdownCtx, cancel := context.WithTimeout(ctxApp, 10*time.Minute)
+	defer cancel()
+
+	if err := e.Shutdown(shutdownCtx); err != nil {
+		log.Println(err)
+	}
+	close(smsChannel)
+	wg.Wait()
+	fmt.Println("Graceful shutdown completed.")
 }

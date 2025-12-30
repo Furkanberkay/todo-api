@@ -1,13 +1,17 @@
 package auth
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
+	"sync"
+	"time"
 	"todoApp3/internal/domain"
 	"todoApp3/internal/email"
 )
 
-func StartSmsWorker(ch <-chan domain.SmsJob) {
-
+func StartSmsWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.WaitGroup, logger *slog.Logger) {
+	defer wg.Done()
 	const htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -53,7 +57,12 @@ func StartSmsWorker(ch <-chan domain.SmsJob) {
 </html>
 `
 
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
 	for job := range ch {
+
+		<-ticker.C
 
 		body := fmt.Sprintf(htmlTemplate, job.Name, job.Surname, job.Message)
 
@@ -62,10 +71,20 @@ func StartSmsWorker(ch <-chan domain.SmsJob) {
 			Subject: "Welcome",
 			Body:    body,
 		}
+		start := time.Now()
+		err := email.Send(ctx, &smtpReq, logger)
+		dur := time.Since(start)
 
-		err := email.Send(&smtpReq)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			logger.Error("smtp send failed",
+				slog.String("to", job.Email),
+				slog.Duration("send_dur", dur),
+				slog.Duration("queue_wait", time.Since(job.EnqueuedAt)),
+				slog.String("err", err.Error()),
+			)
+			continue
 		}
+
 	}
+	fmt.Println("closed")
 }

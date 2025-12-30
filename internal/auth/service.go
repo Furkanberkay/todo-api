@@ -58,7 +58,22 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 		return nil, err
 	}
 
-	s.smsChannel <- domain.SmsJob{Email: user.Email, Message: "Welcome", Name: user.Name, Surname: user.Surname}
+	msg := fmt.Sprintf("Welcome %s %s", user.Name, user.Surname)
+
+	select {
+	case s.smsChannel <- domain.SmsJob{
+		Email:      user.Email,
+		Name:       user.Name,
+		Surname:    user.Surname,
+		EnqueuedAt: time.Now(),
+		Message:    msg,
+	}:
+	case <-ctx.Done():
+		s.logger.Warn("User registered but welcome email skipped due to context cancellation",
+			"email", user.Email,
+			"error", ctx.Err())
+
+	}
 
 	return user, nil
 

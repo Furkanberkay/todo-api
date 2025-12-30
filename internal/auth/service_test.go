@@ -74,8 +74,8 @@ func TestRegisterService(t *testing.T) {
 		}
 
 		repo := MockRepository{ExistingUser: nil, ShouldReturnError: false}
-
-		s := NewService(&repo, cfg, logger)
+		ch := make(chan domain.SmsJob)
+		s := NewService(&repo, cfg, logger, ch)
 		user, err := s.RegisterUser(context.Background(), input)
 
 		assert.NoError(t, err)
