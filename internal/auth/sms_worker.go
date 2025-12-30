@@ -10,7 +10,7 @@ import (
 	"todoApp3/internal/email"
 )
 
-func StartSmsWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.WaitGroup, logger *slog.Logger) {
+func StartSmsWorker(ctx context.Context, tickerChan <-chan time.Time, ch <-chan domain.SmsJob, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
 	const htmlTemplate = `
 <!DOCTYPE html>
@@ -57,12 +57,7 @@ func StartSmsWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.WaitG
 </html>
 `
 
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
 	for job := range ch {
-
-		<-ticker.C
 
 		body := fmt.Sprintf(htmlTemplate, job.Name, job.Surname, job.Message)
 
@@ -71,20 +66,33 @@ func StartSmsWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.WaitG
 			Subject: "Welcome",
 			Body:    body,
 		}
-		start := time.Now()
-		err := email.Send(ctx, &smtpReq, logger)
-		dur := time.Since(start)
 
-		if err != nil {
-			logger.Error("smtp send failed",
-				slog.String("to", job.Email),
-				slog.Duration("send_dur", dur),
-				slog.Duration("queue_wait", time.Since(job.EnqueuedAt)),
-				slog.String("err", err.Error()),
-			)
-			continue
+		const maxRetries = 3
+		for i := 0; i < maxRetries; i++ {
+			select {
+			case <-tickerChan:
+
+			case <-ctx.Done():
+				return
+			}
+			start := time.Now()
+			err := email.Send(ctx, &smtpReq, logger)
+
+			if err == nil {
+				break
+			}
+
+			if i == maxRetries-1 {
+				logger.Error("smtp send failed after retries",
+					slog.String("to", job.Email),
+					slog.Duration("send_dur", time.Since(start)),
+					slog.Duration("queue_wait", time.Since(job.EnqueuedAt)),
+					slog.String("err", err.Error()),
+				)
+			} else {
+				time.Sleep(500 * time.Millisecond)
+			}
 		}
-
 	}
 	fmt.Println("closed")
 }

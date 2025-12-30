@@ -43,12 +43,15 @@ func main() {
 	slog.SetDefault(slogLogger)
 	validate := validator.New()
 
+	globalTicker := time.NewTicker(3 * time.Second)
+	defer globalTicker.Stop()
+
 	smsChannel := make(chan domain.SmsJob, 100)
 	wg := sync.WaitGroup{}
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		wg.Add(1)
-		go auth.StartSmsWorker(ctxApp, smsChannel, &wg, slogLogger)
+		go auth.StartSmsWorker(ctxApp, globalTicker.C, smsChannel, &wg, slogLogger)
 	}
 
 	authRepository := auth.NewRepository(db, slogLogger)
