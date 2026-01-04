@@ -13,6 +13,7 @@ import (
 	"time"
 	"todoApp3/config"
 	"todoApp3/internal/auth"
+	"todoApp3/internal/background"
 	"todoApp3/internal/database"
 	"todoApp3/internal/domain"
 	"todoApp3/internal/httpx"
@@ -23,6 +24,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lmittmann/tint"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -43,15 +45,34 @@ func main() {
 	slog.SetDefault(slogLogger)
 	validate := validator.New()
 
-	globalTicker := time.NewTicker(3 * time.Second)
-	defer globalTicker.Stop()
-
 	smsChannel := make(chan domain.SmsJob, 100)
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < 3; i++ {
 		wg.Add(1)
-		go auth.StartSmsWorker(ctxApp, globalTicker.C, smsChannel, &wg, slogLogger)
+		go auth.StartEmailWorker(ctxApp, smsChannel, &wg, slogLogger)
+	}
+
+	repo := background.NewTodoPruneRepoDB(db)
+	pruner := background.NewTodoPruner(repo, slogLogger)
+
+	c := cron.New()
+
+	_, err := c.AddFunc("@every 10s", func() {
+		ctx, cancel := context.WithTimeout(ctxApp, 5*time.Second)
+		defer cancel()
+
+		deleted, err := pruner.Prune(ctx, 30, 1000)
+		if err != nil && ctx.Err() == nil {
+			slogLogger.Error("todo prune failed", "err", err.Error(), "deleted_count", deleted)
+			return
+		}
+		slogLogger.Debug("todo prune tick", "deleted_count", deleted)
+	})
+	if err != nil {
+		slogLogger.Error("cron add failed", "err", err.Error())
+	} else {
+		c.Start()
 	}
 
 	authRepository := auth.NewRepository(db, slogLogger)
@@ -86,7 +107,10 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	shutdownCtx, cancel := context.WithTimeout(ctxApp, 10*time.Minute)
+	stopCtx := c.Stop()
+	<-stopCtx.Done()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	if err := e.Shutdown(shutdownCtx); err != nil {

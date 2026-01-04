@@ -10,8 +10,9 @@ import (
 	"todoApp3/internal/email"
 )
 
-func StartSmsWorker(ctx context.Context, tickerChan <-chan time.Time, ch <-chan domain.SmsJob, wg *sync.WaitGroup, logger *slog.Logger) {
+func StartEmailWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
+
 	const htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -56,8 +57,12 @@ func StartSmsWorker(ctx context.Context, tickerChan <-chan time.Time, ch <-chan 
 </body>
 </html>
 `
-
 	for job := range ch {
+
+		if ctx.Err() != nil {
+			logger.Info("worker context cancelled, stopping job processing")
+			return
+		}
 
 		body := fmt.Sprintf(htmlTemplate, job.Name, job.Surname, job.Message)
 
@@ -69,12 +74,7 @@ func StartSmsWorker(ctx context.Context, tickerChan <-chan time.Time, ch <-chan 
 
 		const maxRetries = 3
 		for i := 0; i < maxRetries; i++ {
-			select {
-			case <-tickerChan:
 
-			case <-ctx.Done():
-				return
-			}
 			start := time.Now()
 			err := email.Send(ctx, &smtpReq, logger)
 
@@ -90,9 +90,14 @@ func StartSmsWorker(ctx context.Context, tickerChan <-chan time.Time, ch <-chan 
 					slog.String("err", err.Error()),
 				)
 			} else {
-				time.Sleep(500 * time.Millisecond)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(500 * time.Millisecond):
+				}
 			}
 		}
 	}
-	fmt.Println("closed")
+
+	logger.Info("email worker channel closed, exiting")
 }
