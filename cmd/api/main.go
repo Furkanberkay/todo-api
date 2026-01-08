@@ -81,6 +81,7 @@ func main() {
 	protected.Use(authenticationMiddleware.Authenticate)
 
 	authHandler.Routes(api)
+	authHandler.ProtectedRoutes(protected)
 	todoHandler.Routes(protected)
 
 	go func() {
@@ -102,7 +103,7 @@ func main() {
 	}
 	close(emailCh)
 	cancelApp()
-	
+
 	wg.Wait()
 	fmt.Println("Graceful shutdown completed.")
 }

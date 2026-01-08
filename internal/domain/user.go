@@ -14,6 +14,7 @@ type AuthRepository interface {
 	GetUserByUserID(ctx context.Context, userID uint) (*User, error)
 	RotateRefreshToken(ctx context.Context, oldTokenID uint, newToken *RefreshToken) error
 	SaveRefreshToken(ctx context.Context, refreshTokenModel *RefreshToken) error
+	DeleteUser(ctx context.Context, id uint) error
 }
 
 type User struct {
@@ -33,3 +34,4 @@ var InvalidInput = errors.New("invalid input")
 var ErrUserNotFound = errors.New("user not found")
 var ErrInvalidCredentials = errors.New(" invalid credentials")
 var ErrUnAuthorized = errors.New("UnAuthorized")
+var ErrForbidden = errors.New("forbidden")

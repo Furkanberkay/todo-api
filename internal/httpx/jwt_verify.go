@@ -9,6 +9,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type TokenVerifier interface {
+	Verify(ctx context.Context, tokenString string) (*domain.MyCustomClaim, error)
+}
+
 type JwtVerify struct {
 	secretKey string
 	logger    *slog.Logger
@@ -51,7 +55,7 @@ func (j *JwtVerify) Verify(ctx context.Context, tokenString string) (*domain.MyC
 	})
 
 	if err != nil {
-		
+
 		j.logger.Warn("jwt parse/validate failed",
 			"error", err.Error(),
 			"component", "jwt_verify",

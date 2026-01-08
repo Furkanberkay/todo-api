@@ -16,12 +16,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthenticationService interface {
-	RegisterUser(ctx context.Context, input *CreateUserInput) (*domain.User, error)
-	Login(ctx context.Context, loginInput *LoginInput) (*LoginOutput, error)
-	RefreshTokens(ctx context.Context, refreshToken string) (*LoginOutput, error)
-}
-
 type Service struct {
 	repository domain.AuthRepository
 	config     *config.Config
@@ -38,7 +32,7 @@ func NewService(repository domain.AuthRepository, config *config.Config, logger 
 	}
 }
 
-func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserInput) (*domain.User, error) {
+func (s *Service) Register(ctx context.Context, createUserInput *CreateUserInput) (*domain.User, error) {
 
 	if _, err := s.repository.GetUserByEmail(ctx, createUserInput.Email); err == nil {
 		return nil, domain.ErrUserAlreadyExists
@@ -124,7 +118,7 @@ func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 	myClaim := domain.MyCustomClaim{
 		UserID: user.ID,
 		Email:  user.Email,
-		Role:   "user",
+		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expirationDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -210,4 +204,15 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 
 	return &output, nil
 
+}
+
+func (s *Service) Delete(ctx context.Context, role string, id uint) error {
+	if role != "admin" {
+		return domain.ErrForbidden
+	}
+
+	if err := s.repository.DeleteUser(ctx, id); err != nil {
+		return err
+	}
+	return nil
 }

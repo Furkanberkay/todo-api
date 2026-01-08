@@ -50,6 +50,10 @@ func (m *MockRepository) RotateRefreshToken(ctx context.Context, oldID uint, new
 	return nil
 }
 
+func (m *MockRepository) DeleteUser(ctx context.Context, id uint) error {
+	return nil
+}
+
 func TestRegisterService(t *testing.T) {
 	slogHandler := tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      slog.LevelDebug,
@@ -76,7 +80,7 @@ func TestRegisterService(t *testing.T) {
 		repo := MockRepository{ExistingUser: nil, ShouldReturnError: false}
 		ch := make(chan domain.EmailJob)
 		s := NewService(&repo, cfg, logger, ch)
-		user, err := s.RegisterUser(context.Background(), input)
+		user, err := s.Register(context.Background(), input)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, user)
