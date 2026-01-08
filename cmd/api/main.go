@@ -24,7 +24,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/lmittmann/tint"
-	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -45,38 +44,25 @@ func main() {
 	slog.SetDefault(slogLogger)
 	validate := validator.New()
 
-	smsChannel := make(chan domain.SmsJob, 100)
+	emailCh := make(chan domain.EmailJob, 100)
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < 3; i++ {
 		wg.Add(1)
-		go auth.StartEmailWorker(ctxApp, smsChannel, &wg, slogLogger)
+		go auth.StartEmailWorker(ctxApp, emailCh, &wg, slogLogger)
 	}
 
 	repo := background.NewTodoPruneRepoDB(db)
 	pruner := background.NewTodoPruner(repo, slogLogger)
 
-	c := cron.New()
+	pruneWorkerCtx, cancelPruneWorker := context.WithTimeout(ctxApp, time.Second*10)
+	defer cancelPruneWorker()
 
-	_, err := c.AddFunc("@every 10s", func() {
-		ctx, cancel := context.WithTimeout(ctxApp, 5*time.Second)
-		defer cancel()
-
-		deleted, err := pruner.Prune(ctx, 30, 1000)
-		if err != nil && ctx.Err() == nil {
-			slogLogger.Error("todo prune failed", "err", err.Error(), "deleted_count", deleted)
-			return
-		}
-		slogLogger.Debug("todo prune tick", "deleted_count", deleted)
-	})
-	if err != nil {
-		slogLogger.Error("cron add failed", "err", err.Error())
-	} else {
-		c.Start()
-	}
+	pruneWorker := background.NewPruneWorker(pruner, slogLogger)
+	go pruneWorker.StartPruneJob(pruneWorkerCtx, 30, 1000)
 
 	authRepository := auth.NewRepository(db, slogLogger)
-	AuthService := auth.NewService(authRepository, cfg, slogLogger, smsChannel)
+	AuthService := auth.NewService(authRepository, cfg, slogLogger, emailCh)
 	authHandler := auth.NewHandler(AuthService, validate, slogLogger)
 
 	todoRepository := todo.NewRepository(db, slogLogger)
@@ -107,16 +93,13 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	stopCtx := c.Stop()
-	<-stopCtx.Done()
-
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	if err := e.Shutdown(shutdownCtx); err != nil {
 		log.Println(err)
 	}
-	close(smsChannel)
+	close(emailCh)
 	wg.Wait()
 	fmt.Println("Graceful shutdown completed.")
 }

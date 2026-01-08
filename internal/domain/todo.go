@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -12,7 +13,8 @@ type Todo struct {
 	Name        string `gorm:"not null;size:200"`
 	Description string `gorm:"not null;size:300"`
 	Completed   bool   `gorm:"default:false"`
-	UserID      uint   `gorm:"not null"`
+	CompletedAt *time.Time
+	UserID      uint `gorm:"not null"`
 }
 
 type TodoRepository interface {

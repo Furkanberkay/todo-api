@@ -7,7 +7,7 @@ import (
 )
 
 type TodoPruneRepo interface {
-	DeleteCompletedBefore(ctx context.Context, cutoff time.Time, limit int) (int, error)
+	Delete(ctx context.Context, cutoff time.Time, limit int) (int, error)
 }
 
 type TodoPruner struct {
@@ -20,43 +20,34 @@ func NewTodoPruner(repo TodoPruneRepo, logger *slog.Logger) *TodoPruner {
 }
 
 func (p *TodoPruner) Prune(ctx context.Context, retentionDays int, batchSize int) (int, error) {
-	if retentionDays <= 0 {
-		retentionDays = 30
-	}
-	if batchSize <= 0 {
-		batchSize = 1000
-	}
-
+	totalDeleted := 0
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
-	p.logger.Info("prune started", "retention_days", retentionDays, "batch_size", batchSize)
-
-	total := 0
 	for {
-		if err := ctx.Err(); err != nil {
-			p.logger.Warn("prune stopped", "reason", err.Error(), "deleted_count", total)
-			return total, err
+		if ctx.Err() != nil {
+			return totalDeleted, ctx.Err()
 		}
 
-		deleted, err := p.repo.DeleteCompletedBefore(ctx, cutoff, batchSize)
+		queryCtx, queryCancel := context.WithTimeout(ctx, 1*time.Second)
+
+		count, err := p.repo.Delete(queryCtx, cutoff, batchSize)
+
+		queryCancel()
+
 		if err != nil {
-			p.logger.Error("prune failed", "err", err.Error(), "deleted_count", total)
-			return total, err
+			return totalDeleted, err
 		}
 
-		total += deleted
-		if deleted < batchSize {
+		totalDeleted += count
+		if count < batchSize {
 			break
 		}
 
 		select {
 		case <-ctx.Done():
-			p.logger.Warn("prune stopped", "reason", ctx.Err().Error(), "deleted_count", total)
-			return total, ctx.Err()
+			return totalDeleted, ctx.Err()
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-
-	p.logger.Info("prune finished", "deleted_count", total)
-	return total, nil
+	return totalDeleted, nil
 }

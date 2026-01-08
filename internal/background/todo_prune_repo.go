@@ -17,14 +17,14 @@ func NewTodoPruneRepoDB(db *gorm.DB) *TodoPruneRepoDB {
 	return &TodoPruneRepoDB{db: db}
 }
 
-func (r *TodoPruneRepoDB) DeleteCompletedBefore(ctx context.Context, cutoff time.Time, limit int) (int, error) {
+func (r *TodoPruneRepoDB) Delete(ctx context.Context, cutoff time.Time, limit int) (int, error) {
 	if limit <= 0 {
 		limit = 1000
 	}
 
 	res := r.db.WithContext(ctx).
 		Unscoped().
-		Where("completed = ? AND created_at < ?", true, cutoff).
+		Where("deleted_at IS NOT NULL AND deleted_at < ?", cutoff).
 		Limit(limit).
 		Delete(&domain.Todo{})
 

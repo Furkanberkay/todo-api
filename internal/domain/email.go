@@ -2,7 +2,7 @@ package domain
 
 import "time"
 
-type SmsJob struct {
+type EmailJob struct {
 	Email      string
 	Name       string
 	Surname    string

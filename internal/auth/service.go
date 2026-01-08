@@ -26,15 +26,15 @@ type Service struct {
 	repository domain.AuthRepository
 	config     *config.Config
 	logger     *slog.Logger
-	smsChannel chan<- domain.SmsJob
+	emailCh    chan<- domain.EmailJob
 }
 
-func NewService(repository domain.AuthRepository, config *config.Config, logger *slog.Logger, smsChannel chan<- domain.SmsJob) *Service {
+func NewService(repository domain.AuthRepository, config *config.Config, logger *slog.Logger, emailCh chan<- domain.EmailJob) *Service {
 	return &Service{
 		repository: repository,
 		config:     config,
 		logger:     logger,
-		smsChannel: smsChannel,
+		emailCh:    emailCh,
 	}
 }
 
@@ -61,7 +61,7 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 	msg := fmt.Sprintf("Welcome %s %s", user.Name, user.Surname)
 
 	select {
-	case s.smsChannel <- domain.SmsJob{
+	case s.emailCh <- domain.EmailJob{
 		Email:      user.Email,
 		Name:       user.Name,
 		Surname:    user.Surname,

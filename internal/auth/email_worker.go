@@ -10,7 +10,7 @@ import (
 	"todoApp3/internal/email"
 )
 
-func StartEmailWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.WaitGroup, logger *slog.Logger) {
+func StartEmailWorker(ctx context.Context, ch <-chan domain.EmailJob, wg *sync.WaitGroup, logger *slog.Logger) {
 	defer wg.Done()
 
 	const htmlTemplate = `
@@ -59,11 +59,6 @@ func StartEmailWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.Wai
 `
 	for job := range ch {
 
-		if ctx.Err() != nil {
-			logger.Info("worker context cancelled, stopping job processing")
-			return
-		}
-
 		body := fmt.Sprintf(htmlTemplate, job.Name, job.Surname, job.Message)
 
 		smtpReq := email.SmtpRequest{
@@ -72,31 +67,15 @@ func StartEmailWorker(ctx context.Context, ch <-chan domain.SmsJob, wg *sync.Wai
 			Body:    body,
 		}
 
-		const maxRetries = 3
-		for i := 0; i < maxRetries; i++ {
+		jobCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		err := email.Send(jobCtx, &smtpReq, logger)
+		cancel()
 
-			start := time.Now()
-			err := email.Send(ctx, &smtpReq, logger)
-
-			if err == nil {
-				break
-			}
-
-			if i == maxRetries-1 {
-				logger.Error("smtp send failed after retries",
-					slog.String("to", job.Email),
-					slog.Duration("send_dur", time.Since(start)),
-					slog.Duration("queue_wait", time.Since(job.EnqueuedAt)),
-					slog.String("err", err.Error()),
-				)
-			} else {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(500 * time.Millisecond):
-				}
-			}
+		if err != nil {
+			logger.Error("email send failed", "to", job.Email, "err", err)
+			continue
 		}
+
 	}
 
 	logger.Info("email worker channel closed, exiting")
