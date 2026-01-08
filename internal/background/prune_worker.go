@@ -20,18 +20,26 @@ func NewPruneWorker(pruner *TodoPruner, logger *slog.Logger) *Worker {
 
 func (w *Worker) StartPruneJob(ctx context.Context, retentionDays int, batchSize int) {
 	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
-			w.logger.Error("context is done")
+			w.logger.Info("prune_worker_shutdown", "reason", ctx.Err())
+			return
 		case <-ticker.C:
-			total, err := w.pruner.Prune(ctx, retentionDays, batchSize)
+			w.logger.Debug("prune_job_triggered")
+			jobCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			total, err := w.pruner.Prune(jobCtx, retentionDays, batchSize)
+			cancel()
 			if err != nil {
 				w.logger.Error(err.Error())
+				continue
 			}
 
-			if total < batchSize {
-				return
+			if total > 0 {
+				w.logger.Info("prune_job_success", "total_deleted", total)
+			} else {
+				w.logger.Debug("prune_job_no_op", "msg", "no_records_found")
 			}
 		}
 

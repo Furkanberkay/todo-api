@@ -67,7 +67,7 @@ func StartEmailWorker(ctx context.Context, ch <-chan domain.EmailJob, wg *sync.W
 			Body:    body,
 		}
 
-		jobCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		jobCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		err := email.Send(jobCtx, &smtpReq, logger)
 		cancel()
 

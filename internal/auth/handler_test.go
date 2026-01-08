@@ -81,7 +81,7 @@ func TestCreateUser(t *testing.T) {
 
 		h := NewHandler(&mockService, val, slogLogger)
 
-		err := h.RegisterUser(c)
+		err := h.Register(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)

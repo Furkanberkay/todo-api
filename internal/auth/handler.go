@@ -23,7 +23,7 @@ func NewHandler(service AuthenticationService, validator *validator.Validate, lo
 	}
 }
 
-func (h *Handler) RegisterUser(e echo.Context) error {
+func (h *Handler) Register(e echo.Context) error {
 	userDTO := new(RegisterRequest)
 	if err := e.Bind(userDTO); err != nil {
 		return httpx.BindErrorResponse(e)
@@ -112,4 +112,8 @@ func (h *Handler) Refresh(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, &refreshResponse)
+}
+
+func (h *Handler) Delete(c echo.Context) error {
+	return nil
 }

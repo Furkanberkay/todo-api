@@ -23,6 +23,7 @@ type User struct {
 	Username       string `gorm:"not null;unique;size:100"`
 	Email          string `gorm:"not null;unique;size:100"`
 	HashedPassword string `gorm:"not null;size:300"`
+	Role           string `gorm:"default:user"`
 	Todos          []Todo `gorm:"foreignKey:UserID"`
 }
 

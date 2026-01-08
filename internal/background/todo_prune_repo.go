@@ -17,9 +17,15 @@ func NewTodoPruneRepoDB(db *gorm.DB) *TodoPruneRepoDB {
 	return &TodoPruneRepoDB{db: db}
 }
 
+const MaxBatchSize = 5000
+
 func (r *TodoPruneRepoDB) Delete(ctx context.Context, cutoff time.Time, limit int) (int, error) {
+
 	if limit <= 0 {
 		limit = 1000
+	}
+	if limit > MaxBatchSize {
+		limit = MaxBatchSize
 	}
 
 	res := r.db.WithContext(ctx).

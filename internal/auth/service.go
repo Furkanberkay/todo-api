@@ -84,7 +84,6 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 	email := loginInput.Email
 
 	user, err := s.repository.GetUserByEmail(ctx, email)
-
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
@@ -125,6 +124,7 @@ func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 	myClaim := domain.MyCustomClaim{
 		UserID: user.ID,
 		Email:  user.Email,
+		Role:   "user",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expirationDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

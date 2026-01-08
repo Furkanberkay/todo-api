@@ -23,28 +23,31 @@ func (p *TodoPruner) Prune(ctx context.Context, retentionDays int, batchSize int
 	totalDeleted := 0
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
+	p.logger.Info("prune_cycle_started", "cutoff", cutoff, "batch_size", batchSize)
+
 	for {
 		if ctx.Err() != nil {
+			p.logger.Warn("prune_cycle_interrupted", "reason", ctx.Err().Error(), "total_deleted", totalDeleted)
 			return totalDeleted, ctx.Err()
 		}
 
-		queryCtx, queryCancel := context.WithTimeout(ctx, 1*time.Second)
-
-		count, err := p.repo.Delete(queryCtx, cutoff, batchSize)
-
-		queryCancel()
-
+		count, err := p.repo.Delete(ctx, cutoff, batchSize)
 		if err != nil {
+			p.logger.Error("prune_repo_delete_failed", "error", err.Error(), "total_deleted", totalDeleted)
 			return totalDeleted, err
 		}
 
 		totalDeleted += count
+
+		p.logger.Debug("prune_batch_processed", "deleted_count", count, "total_deleted", totalDeleted)
 		if count < batchSize {
+			p.logger.Info("prune_cycle_completed", "total_deleted", totalDeleted)
 			break
 		}
 
 		select {
 		case <-ctx.Done():
+			p.logger.Warn("prune_cycle_cancelled_during_backoff", "total_deleted", totalDeleted)
 			return totalDeleted, ctx.Err()
 		case <-time.After(100 * time.Millisecond):
 		}

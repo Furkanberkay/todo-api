@@ -29,7 +29,6 @@ import (
 func main() {
 
 	ctxApp, cancelApp := context.WithCancel(context.Background())
-	defer cancelApp()
 
 	cfg := config.Load()
 	db := database.NewSQLite(cfg.SQLitePath)
@@ -55,11 +54,12 @@ func main() {
 	repo := background.NewTodoPruneRepoDB(db)
 	pruner := background.NewTodoPruner(repo, slogLogger)
 
-	pruneWorkerCtx, cancelPruneWorker := context.WithTimeout(ctxApp, time.Second*10)
-	defer cancelPruneWorker()
-
 	pruneWorker := background.NewPruneWorker(pruner, slogLogger)
-	go pruneWorker.StartPruneJob(pruneWorkerCtx, 30, 1000)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pruneWorker.StartPruneJob(ctxApp, 30, 1000)
+	}()
 
 	authRepository := auth.NewRepository(db, slogLogger)
 	AuthService := auth.NewService(authRepository, cfg, slogLogger, emailCh)
@@ -92,6 +92,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
+	slogLogger.Info("Shutdown signal received...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
@@ -100,6 +101,8 @@ func main() {
 		log.Println(err)
 	}
 	close(emailCh)
+	cancelApp()
+	
 	wg.Wait()
 	fmt.Println("Graceful shutdown completed.")
 }
