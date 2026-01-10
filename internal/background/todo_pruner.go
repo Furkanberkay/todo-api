@@ -17,6 +17,7 @@ type TodoPruner struct {
 
 func NewTodoPruner(repo TodoPruneRepo, logger *slog.Logger) *TodoPruner {
 	return &TodoPruner{repo: repo, logger: logger}
+
 }
 
 func (p *TodoPruner) Prune(ctx context.Context, retentionDays int, batchSize int) (int, error) {
@@ -39,7 +40,7 @@ func (p *TodoPruner) Prune(ctx context.Context, retentionDays int, batchSize int
 
 		totalDeleted += count
 
-		p.logger.Debug("prune_batch_processed", "deleted_count", count, "total_deleted", totalDeleted)
+		p.logger.Info("prune_batch_processed", "deleted_count", count, "total_deleted", totalDeleted)
 		if count < batchSize {
 			p.logger.Info("prune_cycle_completed", "total_deleted", totalDeleted)
 			break

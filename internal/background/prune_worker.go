@@ -27,7 +27,7 @@ func (w *Worker) StartPruneJob(ctx context.Context, retentionDays int, batchSize
 			w.logger.Info("prune_worker_shutdown", "reason", ctx.Err())
 			return
 		case <-ticker.C:
-			w.logger.Debug("prune_job_triggered")
+			w.logger.Info("prune_job_triggered")
 			jobCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			total, err := w.pruner.Prune(jobCtx, retentionDays, batchSize)
 			cancel()
@@ -39,7 +39,7 @@ func (w *Worker) StartPruneJob(ctx context.Context, retentionDays int, batchSize
 			if total > 0 {
 				w.logger.Info("prune_job_success", "total_deleted", total)
 			} else {
-				w.logger.Debug("prune_job_no_op", "msg", "no_records_found")
+				w.logger.Info("prune_job_no_op", "msg", "no_records_found")
 			}
 		}
 
