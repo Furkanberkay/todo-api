@@ -3,7 +3,6 @@ package todo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"testing"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 func TestService_UpdateTodo(t *testing.T) {
@@ -356,106 +356,202 @@ func TestService_GetTodoByID(t *testing.T) {
 }
 
 func TestService_GetTodos(t *testing.T) {
-	type fields struct {
-		repository domain.TodoRepository
-		logger     *slog.Logger
-	}
 	type args struct {
 		ctx    context.Context
 		page   int
 		limit  int
 		userID uint
 	}
+
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    []domain.Todo
-		want1   int
-		wantErr assert.ErrorAssertionFunc
+		name      string
+		args      args
+		setupMock func(m *mocks.TodoRepository)
+		want      []domain.Todo
+		wantCount int
+		wantErr   bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success_Standard",
+			args: args{
+				ctx:    context.Background(),
+				page:   1,
+				limit:  10,
+				userID: 55,
+			},
+			setupMock: func(m *mocks.TodoRepository) {
+				fakeTodos := []domain.Todo{
+					{Model: gorm.Model{ID: 1}, Name: "Task 1", UserID: 55},
+					{Model: gorm.Model{ID: 2}, Name: "Task 2", UserID: 55},
+				}
+				m.On("GetTodos", mock.Anything, 1, 10, uint(55)).Return(fakeTodos, 2, nil)
+			},
+			want: []domain.Todo{
+				{Model: gorm.Model{ID: 1}, Name: "Task 1", UserID: 55},
+				{Model: gorm.Model{ID: 2}, Name: "Task 2", UserID: 55},
+			},
+			wantCount: 2,
+			wantErr:   false,
+		},
+		{
+			name: "Success_Pagination_Logic",
+			args: args{
+				ctx:    context.Background(),
+				page:   0,
+				limit:  100,
+				userID: 55,
+			},
+			setupMock: func(m *mocks.TodoRepository) {
+				m.On("GetTodos", mock.Anything, 1, 30, uint(55)).Return([]domain.Todo{}, 0, nil)
+			},
+			want:      []domain.Todo{},
+			wantCount: 0,
+			wantErr:   false,
+		},
+		{
+			name: "Database_Error",
+			args: args{
+				ctx:    context.Background(),
+				page:   1,
+				limit:  10,
+				userID: 55,
+			},
+			setupMock: func(m *mocks.TodoRepository) {
+				m.On("GetTodos", mock.Anything, 1, 10, uint(55)).Return(nil, 0, errors.New("db error"))
+			},
+			want:      nil,
+			wantCount: 0,
+			wantErr:   true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := new(mocks.TodoRepository)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockRepo)
+			}
+
 			s := &Service{
-				repository: tt.fields.repository,
-				logger:     tt.fields.logger,
+				repository: mockRepo,
+				logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
 			}
-			got, got1, err := s.GetTodos(tt.args.ctx, tt.args.page, tt.args.limit, tt.args.userID)
-			if !tt.wantErr(t, err, fmt.Sprintf("GetTodos(%v, %v, %v, %v)", tt.args.ctx, tt.args.page, tt.args.limit, tt.args.userID)) {
-				return
+
+			got, count, err := s.GetTodos(tt.args.ctx, tt.args.page, tt.args.limit, tt.args.userID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+				assert.Equal(t, tt.wantCount, count)
 			}
-			assert.Equalf(t, tt.want, got, "GetTodos(%v, %v, %v, %v)", tt.args.ctx, tt.args.page, tt.args.limit, tt.args.userID)
-			assert.Equalf(t, tt.want1, got1, "GetTodos(%v, %v, %v, %v)", tt.args.ctx, tt.args.page, tt.args.limit, tt.args.userID)
+
+			mockRepo.AssertExpectations(t)
 		})
 	}
 }
 
 func TestService_PatchTodo(t *testing.T) {
-	type fields struct {
-		repository domain.TodoRepository
-		logger     *slog.Logger
-	}
+	updatedName := "Patched Name"
+
 	type args struct {
 		ctx    context.Context
 		userID uint
 		input  *PatchTodoInput
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *domain.Todo
-		wantErr assert.ErrorAssertionFunc
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{
-				repository: tt.fields.repository,
-				logger:     tt.fields.logger,
-			}
-			got, err := s.PatchTodo(tt.args.ctx, tt.args.userID, tt.args.input)
-			if !tt.wantErr(t, err, fmt.Sprintf("PatchTodo(%v, %v, %v)", tt.args.ctx, tt.args.userID, tt.args.input)) {
-				return
-			}
-			assert.Equalf(t, tt.want, got, "PatchTodo(%v, %v, %v)", tt.args.ctx, tt.args.userID, tt.args.input)
-		})
-	}
-}
 
-func TestService_UpdateTodo1(t *testing.T) {
-	type fields struct {
-		repository domain.TodoRepository
-		logger     *slog.Logger
-	}
-	type args struct {
-		ctx    context.Context
-		input  *UpdateTodoInput
-		userID uint
-	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *domain.Todo
-		wantErr assert.ErrorAssertionFunc
+		name      string
+		args      args
+		setupMock func(m *mocks.TodoRepository)
+		want      *domain.Todo
+		wantErr   bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success_Patch_Name_Only",
+			args: args{
+				ctx:    context.Background(),
+				userID: 1,
+				input: &PatchTodoInput{
+					ID:   10,
+					Name: &updatedName,
+				},
+			},
+			setupMock: func(m *mocks.TodoRepository) {
+				oldTodo := &domain.Todo{Model: gorm.Model{ID: 10}, UserID: 1, Name: "Old Name", Description: "Old Description"}
+
+				m.On("GetTodoByID", mock.Anything, uint(1), uint(10)).Return(oldTodo, nil)
+
+				m.On("UpdateTodo", mock.Anything, mock.MatchedBy(func(d *domain.Todo) bool {
+					return d.Name == "Patched Name" && d.Description == "Old Description"
+				})).Return(nil)
+			},
+			want: &domain.Todo{
+				Model:       gorm.Model{ID: 10},
+				UserID:      1,
+				Name:        "Patched Name",
+				Description: "Old Description",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error_All_Fields_Nil",
+			args: args{
+				ctx:    context.Background(),
+				userID: 1,
+				input: &PatchTodoInput{
+					ID: 10,
+				},
+			},
+			setupMock: func(m *mocks.TodoRepository) {
+				
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "Error_Todo_Not_Found",
+			args: args{
+				ctx:    context.Background(),
+				userID: 1,
+				input: &PatchTodoInput{
+					ID:   99,
+					Name: &updatedName,
+				},
+			},
+			setupMock: func(m *mocks.TodoRepository) {
+				m.On("GetTodoByID", mock.Anything, uint(1), uint(99)).Return(nil, errors.New("not found"))
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := new(mocks.TodoRepository)
+
+			if tt.setupMock != nil {
+				tt.setupMock(mockRepo)
+			}
+
 			s := &Service{
-				repository: tt.fields.repository,
-				logger:     tt.fields.logger,
+				repository: mockRepo,
+				logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
 			}
-			got, err := s.UpdateTodo(tt.args.ctx, tt.args.input, tt.args.userID)
-			if !tt.wantErr(t, err, fmt.Sprintf("UpdateTodo(%v, %v, %v)", tt.args.ctx, tt.args.input, tt.args.userID)) {
-				return
+
+			got, err := s.PatchTodo(tt.args.ctx, tt.args.userID, tt.args.input)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
-			assert.Equalf(t, tt.want, got, "UpdateTodo(%v, %v, %v)", tt.args.ctx, tt.args.input, tt.args.userID)
+
+			mockRepo.AssertExpectations(t)
 		})
 	}
 }
