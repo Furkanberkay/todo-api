@@ -9,10 +9,10 @@ import (
 )
 
 type AuthenticationMiddleware struct {
-	Verify domain.TokenVerify
+	Verify httpx.TokenVerifier
 }
 
-func NewAuthenticationMiddleware(verify domain.TokenVerify) *AuthenticationMiddleware {
+func NewAuthenticationMiddleware(verify httpx.TokenVerifier) *AuthenticationMiddleware {
 	return &AuthenticationMiddleware{
 		Verify: verify,
 	}

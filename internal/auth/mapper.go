@@ -35,6 +35,7 @@ func MapCreateUserInputToUser(input *CreateUserInput, hashedPassword string) *do
 		Surname:        input.Surname,
 		Username:       input.Username,
 		Email:          input.Email,
+		Role:           "user",
 		HashedPassword: hashedPassword,
 	}
 }

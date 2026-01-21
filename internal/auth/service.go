@@ -16,27 +16,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthenticationService interface {
-	RegisterUser(ctx context.Context, input *CreateUserInput) (*domain.User, error)
-	Login(ctx context.Context, loginInput *LoginInput) (*LoginOutput, error)
-	RefreshTokens(ctx context.Context, refreshToken string) (*LoginOutput, error)
-}
-
 type Service struct {
 	repository domain.AuthRepository
 	config     *config.Config
 	logger     *slog.Logger
+	emailCh    chan<- domain.EmailJob
 }
 
-func NewService(repository domain.AuthRepository, config *config.Config, logger *slog.Logger) *Service {
+func NewService(repository domain.AuthRepository, config *config.Config, logger *slog.Logger, emailCh chan<- domain.EmailJob) *Service {
 	return &Service{
 		repository: repository,
 		config:     config,
 		logger:     logger,
+		emailCh:    emailCh,
 	}
 }
 
-func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserInput) (*domain.User, error) {
+func (s *Service) Register(ctx context.Context, createUserInput *CreateUserInput) (*domain.User, error) {
 
 	if _, err := s.repository.GetUserByEmail(ctx, createUserInput.Email); err == nil {
 		return nil, domain.ErrUserAlreadyExists
@@ -56,6 +52,23 @@ func (s *Service) RegisterUser(ctx context.Context, createUserInput *CreateUserI
 		return nil, err
 	}
 
+	msg := fmt.Sprintf("Welcome %s %s", user.Name, user.Surname)
+
+	select {
+	case s.emailCh <- domain.EmailJob{
+		Email:      user.Email,
+		Name:       user.Name,
+		Surname:    user.Surname,
+		EnqueuedAt: time.Now(),
+		Message:    msg,
+	}:
+	case <-ctx.Done():
+		s.logger.Warn("User registered but welcome email skipped due to context cancellation",
+			"email", user.Email,
+			"error", ctx.Err())
+
+	}
+
 	return user, nil
 
 }
@@ -65,7 +78,6 @@ func (s *Service) Login(ctx context.Context, loginInput *LoginInput) (*LoginOutp
 	email := loginInput.Email
 
 	user, err := s.repository.GetUserByEmail(ctx, email)
-
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
@@ -106,6 +118,7 @@ func (s *Service) generateAccessToken(user *domain.User) (string, error) {
 	myClaim := domain.MyCustomClaim{
 		UserID: user.ID,
 		Email:  user.Email,
+		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expirationDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -152,7 +165,6 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 	tokenHashHex := hex.EncodeToString(hashBytes[:])
 
 	oldTokenModel, err := s.repository.GetRefreshToken(ctx, &tokenHashHex)
-
 	if err != nil {
 		return nil, domain.ErrUnAuthorized
 	}
@@ -166,13 +178,11 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 	}
 
 	user, serviceErr := s.repository.GetUserByUserID(ctx, oldTokenModel.UserID)
-
 	if serviceErr != nil {
 		return nil, serviceErr
 	}
 
 	accessToken, accessTokenErr := s.generateAccessToken(user)
-
 	if accessTokenErr != nil {
 		return nil, accessTokenErr
 	}
@@ -194,4 +204,15 @@ func (s *Service) RefreshTokens(ctx context.Context, refreshToken string) (*Logi
 
 	return &output, nil
 
+}
+
+func (s *Service) Delete(ctx context.Context, role string, id uint) error {
+	if role != "admin" {
+		return domain.ErrForbidden
+	}
+
+	if err := s.repository.DeleteUser(ctx, id); err != nil {
+		return err
+	}
+	return nil
 }

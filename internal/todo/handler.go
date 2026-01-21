@@ -141,7 +141,6 @@ func (h *Handler) UpdateTodo(e echo.Context) error {
 	updateInput := UpdateRequestToUpdateInput(id, updateDTO)
 
 	todo, serviceErr := h.service.UpdateTodo(e.Request().Context(), updateInput, userID)
-
 	if serviceErr != nil {
 		return httpx.HandlerError(e, serviceErr)
 	}

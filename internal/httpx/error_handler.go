@@ -19,6 +19,14 @@ func HandlerError(e echo.Context, err error) error {
 		return e.JSON(http.StatusConflict, ResponseError{
 			Message: "User already exists",
 		})
+	case errors.Is(err, domain.ErrUserNotFound):
+		return e.JSON(http.StatusBadRequest, ResponseError{
+			Message: "user not found",
+		})
+	case errors.Is(err, domain.ErrForbidden):
+		return e.JSON(http.StatusForbidden, ResponseError{
+			Message: "forbidden",
+		})
 
 	case errors.Is(err, domain.InvalidInput):
 		return e.JSON(http.StatusBadRequest, ResponseError{

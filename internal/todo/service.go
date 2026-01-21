@@ -3,6 +3,7 @@ package todo
 import (
 	"context"
 	"log/slog"
+	"time"
 	"todoApp3/internal/domain"
 )
 
@@ -66,7 +67,16 @@ func (s *Service) UpdateTodo(ctx context.Context, input *UpdateTodoInput, userID
 
 	todo.Name = input.Name
 	todo.Description = input.Description
-	todo.Completed = input.Completed
+
+	if todo.Completed != input.Completed {
+		if input.Completed {
+			now := time.Now()
+			todo.CompletedAt = &now
+		} else {
+			todo.CompletedAt = nil
+		}
+		todo.Completed = input.Completed
+	}
 
 	if err := s.repository.UpdateTodo(ctx, todo); err != nil {
 		return nil, err
@@ -96,7 +106,13 @@ func (s *Service) PatchTodo(ctx context.Context, userID uint, input *PatchTodoIn
 	if input.Description != nil {
 		todo.Description = *input.Description
 	}
-	if input.Completed != nil {
+	if input.Completed != nil && todo.Completed != *input.Completed {
+		if *input.Completed {
+			now := time.Now()
+			todo.CompletedAt = &now
+		} else {
+			todo.CompletedAt = nil
+		}
 		todo.Completed = *input.Completed
 	}
 

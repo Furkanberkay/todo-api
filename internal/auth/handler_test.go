@@ -22,7 +22,7 @@ type MockAuthService struct {
 	ShouldError bool
 }
 
-func (s *MockAuthService) RegisterUser(ctx context.Context, input *CreateUserInput) (*domain.User, error) {
+func (s *MockAuthService) Register(ctx context.Context, input *CreateUserInput) (*domain.User, error) {
 	if s.ShouldError {
 		return nil, domain.InternalError
 	}
@@ -55,6 +55,10 @@ func (s *MockAuthService) RefreshTokens(ctx context.Context, refreshToken string
 	return nil, nil
 }
 
+func (s *MockAuthService) Delete(ctx context.Context, role string, id uint) error {
+	return nil
+}
+
 func TestCreateUser(t *testing.T) {
 
 	t.Run("create", func(t *testing.T) {
@@ -81,7 +85,7 @@ func TestCreateUser(t *testing.T) {
 
 		h := NewHandler(&mockService, val, slogLogger)
 
-		err := h.RegisterUser(c)
+		err := h.Register(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
