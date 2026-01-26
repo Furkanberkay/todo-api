@@ -31,7 +31,6 @@ func main() {
 	ctxApp, cancelApp := context.WithCancel(context.Background())
 
 	cfg := config.Load()
-	db := database.NewSQLite(cfg.SQLitePath)
 
 	slogHandler := tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      slog.LevelDebug,
@@ -41,6 +40,12 @@ func main() {
 
 	slogLogger := slog.New(slogHandler)
 	slog.SetDefault(slogLogger)
+
+	postgres := database.NewPostgresSql(slogLogger, cfg)
+	db := postgres.Connect()
+
+	database.AutoMigrate(db)
+
 	validate := validator.New()
 
 	emailCh := make(chan domain.EmailJob, 100)
