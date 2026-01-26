@@ -1,2 +1,6 @@
 .env
-.idea/
+todo2.db
+.DS_Store
+Thumbs.db
+main
+main.exe
