@@ -13,7 +13,7 @@ FROM alpine:latest
 
 RUN apk add --no-cache tzdata
 
-WORKDIR /root/
+WORKDIR /root/ 
 
 COPY --from=builder /app/main/ .
 
